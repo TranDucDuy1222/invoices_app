@@ -2,8 +2,6 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox # Import messagebox để hiện thông báo
 
-
-
 # Thay thế dữ liệu từ database
 sample_data = [
     (1, "Đá bụi", "Xe", 1200000),
@@ -20,12 +18,17 @@ class MatHangView(tk.Frame):
         # Gọi phương thức để tạo tất cả các widget
         self.create_widgets()
 
+    # Phương thức để tạo các widget trong frame 
     def create_widgets(self):
         #------ Bảng mặt hàng ------
         left_frame = tk.Frame(self, bg="white")
         left_frame.pack(side="left", fill="both", expand=True, padx=(0, 10))
 
         tk.Label(left_frame, text="Danh sách mặt hàng", font=("Segoe UI", 16, "bold"), bg="white").pack(pady=(0, 10), anchor="w")
+        style = ttk.Style()
+        # Cấu hình style cho Treeview để mỗi hàng cao 40px, đủ cho 2 dòng text
+        style.configure("Treeview", rowheight=40, font=("Segoe UI", 10))
+        style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
 
         columns = ("id", "ten_mat_hang", "don_vi", "gia")
         self.tree_mh = ttk.Treeview(left_frame, columns=columns, show="headings", selectmode="browse")
@@ -40,8 +43,8 @@ class MatHangView(tk.Frame):
         self.tree_mh.column("don_vi", width=100, anchor="center")
         self.tree_mh.column("gia", width=120, anchor="e")
 
-        for item in sample_data:
-            self.tree_mh.insert("", "end", values=item)
+        # for item in sample_data:
+        #     self.tree_mh.insert("", "end", values=item)
         # Thanh cuộn
         scrollbar_mh = ttk.Scrollbar(left_frame, orient="vertical", command=self.tree_mh.yview)
         self.tree_mh.configure(yscrollcommand=scrollbar_mh.set)
@@ -92,8 +95,20 @@ class MatHangView(tk.Frame):
         update_btn.pack(side="left", expand=True, padx=10)
         
         delete_btn = tk.Button(button_frame, text="Xóa", bg="#e74c3c", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=10)
-        delete_btn.pack(side="left", expand=True)
-    
+        delete_btn.pack(side="left", expand=True)    
+
+    # Hiển thị sản phẩm
+    def set_products_list(self, data):
+        """
+        Xóa dữ liệu cũ trong bảng và hiển thị dữ liệu mới.
+        Phương thức này sẽ được gọi bởi Controller.
+        """
+        for item in self.tree_mh.get_children():
+            self.tree_mh.delete(item)
+        for item in data:
+            self.tree_mh.insert("", "end", values=item)
+
+    # Chọn một mặt hàng trong Treeview và cập nhật thông tin vào các ô Entry
     def on_item_select(self, event):
         # Lấy dòng được chọn từ Treeview của class (self.tree_mh)
         selected_items = self.tree_mh.selection()
@@ -115,6 +130,8 @@ class MatHangView(tk.Frame):
         self.form_fields_mh["Đơn vị:"].set(values[2])
         self.formatted_price = f"{int(values[3]):,}".replace(",", ".")
         self.form_fields_mh["Giá:"].set(self.formatted_price)
+    
+    # Thêm mặt hàng mới
     def add_item(self):
         # Tạo cửa sổ thêm mặt hàng
         add_window = tk.Toplevel(self.root_window)
@@ -158,6 +175,7 @@ class MatHangView(tk.Frame):
         cancel_btn = tk.Button(button_frame_add, text="Hủy", command=add_window.destroy, bg="#e74c3c", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=10)
         cancel_btn.pack(side="right")
 
+    # Phương thức để cập nhật mặt hàng đã chọn
     def update_item(self):
         # Kiểm tra và lấy thông tin mặt hàng
         selected_id = self.form_fields_mh["ID:"].get()

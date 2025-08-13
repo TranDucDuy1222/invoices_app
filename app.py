@@ -3,8 +3,15 @@ from tkinter import ttk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 
+# Import Controller
+from controllers.products_controller import ProductController
+
+# Import Model
+from models.base_model import BaseModel
+from models.products_model import ProductModel
+
 # Import class view từ file đã tách
-from views.mat_hang import MatHangView
+from views.products_view import MatHangView
 from views.khach_hang import KhachHangView
 from views.hoa_don import TaoHoaDonView
 class App(tk.Tk):
@@ -13,6 +20,10 @@ class App(tk.Tk):
         
         self.geometry("1100x700")
         self.title("Quản lý hóa đơn")
+
+        # Kết nối với cơ sở dữ liệu
+        self.db_path = "database/CSP_0708.db"
+    
         self.configure(bg="#f0f0f0")
 
         self.frames = {} # Dictionary để lưu các frame trang
@@ -120,6 +131,7 @@ class App(tk.Tk):
         mat_hang_page = MatHangView(self.main_content_frame, self)
         mat_hang_page.grid(row=0, column=0, sticky="nsew")
         self.frames["Mặt hàng"] = mat_hang_page
+        self.products_controller = ProductController(view=mat_hang_page, db_path=self.db_path)
 
         khach_hang_page = KhachHangView(self.main_content_frame, self)
         khach_hang_page.grid(row=0, column=0, sticky='nsew')

@@ -1,0 +1,47 @@
+Lệnh truy vấn các cột thuộc bảng
+
+ - products
++ id_sp
++ id_bai
++ ten_sp
++ gia_ban
++ don_vi_tinh
+
+- yards
++ id_bai
++ ten_bai
++ dia_chi
+
+- invoices
++ id_hd
++ id_kh
++ ngay_tao_hd
++ tong_tien
++ trang_thai
+
+- invoices_details
++ id_cthd
++ id_hd
++ id_sp
++ so_luong
++ phi_van_chuyen
+
+- debts
++  id_cn
++ id_kh
++ cong_no
+
+- customers
++ id_kh
++ ten
++ Suc0u273 t
+
+- admin_invoices
++ id_hdqt
++ id_kh
++ id_hds (lưu id hoá đơn thành 1 mảng)
+
+- addresses
++ id_dc
++ id_kh
++ dia_chi
