@@ -92,7 +92,7 @@ class MatHangView(tk.Frame):
         update_btn = tk.Button(button_frame, text="Sửa", command=self.update_item_window, bg="#f39c12", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=10)
         update_btn.pack(side="left", expand=True, padx=10)
         
-        delete_btn = tk.Button(button_frame, text="Xóa", bg="#e74c3c", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=10)
+        delete_btn = tk.Button(button_frame, text="Xóa", command=self.delete_item, bg="#e74c3c", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=10)
         delete_btn.pack(side="left", expand=True)    
 
     # Hiển thị sản phẩm
@@ -182,6 +182,7 @@ class MatHangView(tk.Frame):
         yard_combo.pack(side="left", expand=True, fill="x")
         yard_combo.set("Không có bãi") # Đặt giá trị mặc định được hiển thị       
             
+        # Hàm lưu mặt hàng mới
         def save_new_item():
             ten = add_fields["Tên mặt hàng:"].get().strip()
             donvi = add_fields["Đơn vị:"].get().strip()
@@ -205,28 +206,9 @@ class MatHangView(tk.Frame):
                         id_bai = yard[0]
                         break
 
-            try:
-                conn = sqlite3.connect("database/CSP_0708.db")
-                cursor = conn.cursor()
-                # Giả sử bảng có tên 'products' và có cột id_bai (nullable)
-                if id_bai is not None:
-                    cursor.execute(
-                        "INSERT INTO products (ten_sp, don_vi_tinh, gia_ban, id_bai) VALUES (?, ?, ?, ?)",
-                        (ten, donvi, gia_int, id_bai)
-                    )
-                else:
-                    cursor.execute(
-                        "INSERT INTO products (ten_sp, don_vi_tinh, gia_ban) VALUES (?, ?, ?)",
-                        (ten, donvi, gia_int)
-                    )
-                conn.commit()
-                conn.close()
-                messagebox.showinfo("Thành công", "Đã thêm mặt hàng mới!")
-                add_window.destroy()
-                # Sau khi thêm, load lại danh sách mặt hàng
-                self.reload_products_list()
-            except Exception as e:
-                messagebox.showerror("Lỗi", f"Không thể thêm mặt hàng: {e}")
+            # Gọi phương thức add_item từ controller
+            self.controller.add_item(id_bai, ten, gia_int, donvi)
+            add_window.destroy()
 
         # Nút lưu và hủy
         button_frame_add = tk.Frame(form_add, bg="#f7f9fc")
@@ -249,7 +231,10 @@ class MatHangView(tk.Frame):
         try:
             conn = sqlite3.connect("database/CSP_0708.db")
             cursor = conn.cursor()
-            cursor.execute("SELECT id_sp, ten_sp, don_vi_tinh, gia_ban FROM products")
+            cursor.execute("""SELECT p.id_sp, p.ten_sp, p.don_vi_tinh, p.gia_ban, 
+                   IFNULL(y.ten_bai, 'Không có bãi')
+            FROM products p
+            LEFT JOIN yards y ON p.id_bai = y.id_bai""")
             data = cursor.fetchall()
             conn.close()
             self.set_products_list(data)
@@ -340,3 +325,16 @@ class MatHangView(tk.Frame):
 
         cancel_btn = tk.Button(button_frame_edit, text="Hủy", command=edit_window.destroy, bg="#e74c3c", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=10)
         cancel_btn.pack(side="right")
+    
+    def delete_item(self):
+        selected_id = self.form_fields_mh["ID:"].get()
+        if not selected_id:
+            messagebox.showwarning("Cảnh báo", "Vui lòng chọn một mặt hàng để xóa!")
+            return
+        
+        confirm = messagebox.askyesno("Xác nhận xóa", f"Bạn có chắc muốn xóa mặt hàng này !")
+        if not confirm:
+            return
+        # Gọi phương thức delete_item từ controller
+        self.controller.delete_item(selected_id)
+        

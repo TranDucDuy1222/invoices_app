@@ -1,24 +1,26 @@
 from models.products_model import ProductModel
 import sqlite3
 from views.config import db_path
+from tkinter import messagebox
 
 class ProductController:
     def __init__(self, view, db_path):
         self.view = view
         self.model = ProductModel(db_path)
+        self.view.controller = self
         self.load_products()
         self.load_yards()
 
-    def reload_products_list(self, db_path):
-        try:
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT id_sp, id_bai, ten_mat_hang, don_vi_tinh, gia_ban FROM products")
-            data = cursor.fetchall()
-            conn.close()
-            self.view.set_products_list(data)
-        except Exception as e:
-            print("Lỗi khi load danh sách mặt hàng:", e)
+    # def reload_products_list(self):
+    #     try:
+    #         conn = sqlite3.connect("database/CSP_0708.db")
+    #         cursor = conn.cursor()
+    #         cursor.execute("SELECT id_sp, id_bai, ten_mat_hang, don_vi_tinh, gia_ban FROM products")
+    #         data = cursor.fetchall()
+    #         conn.close()
+    #         self.view.set_products_list(data)
+    #     except Exception as e:
+    #         print("Lỗi khi load danh sách mặt hàng:", e)
 
     def load_products(self):
         """
@@ -56,18 +58,24 @@ class ProductController:
         self.yard_name_to_id_map = {yard[1]: yard[0] for yard in self.yards_data}
         self.view.set_yard_list(self.yards_data)
 
-    def add_item(self, id_bai, ten_sp, gia_ban, don_vi_tinh):
-        # Kiểm tra dữ liệu hợp lệ
-        if not ten_sp.strip():
-            return False, "Tên mặt hàng không được để trống!"
+    def add_item(self, id_bai, ten, gia, donvi):
         try:
-            price = float(gia_ban)
-        except ValueError:
-            return False, "Giá phải là số!"
-        
-        # Lưu vào DB
-        self.model.add_item(id_bai.strip(), ten_sp.strip(), gia_ban, don_vi_tinh)
-        return True, "Thêm mặt hàng thành công!"
+            self.model.add_item(id_bai, ten, gia, donvi)
+            messagebox.showinfo("Thành công", "Đã thêm mặt hàng mới!")
+            # Sau khi thêm, load lại danh sách mặt hàng
+            self.view.reload_products_list()
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể thêm mặt hàng: {e}")
+
+    
+    def delete_item(self, selected_id):
+        try:
+            # Gọi phương thức delete_item từ model
+            self.model.delete_item(selected_id)
+            messagebox.showinfo("Thành công", "Đã xóa mặt hàng!")
+            self.view.reload_products_list()  # Tải lại danh sách sau khi xóa
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể xóa mặt hàng: {e}")
     
     def __del__(self):
         self.model.close()
