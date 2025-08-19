@@ -15,6 +15,8 @@ from views.products_view import MatHangView
 from views.khach_hang import KhachHangView
 from views.hoa_don import TaoHoaDonView
 from views.lich_su_hoa_don import LsHoaDonView
+from views.bai import YardView
+from views.cong_no import CongNoView
 
 class App(tk.Tk):
     def __init__(self):
@@ -150,16 +152,14 @@ class App(tk.Tk):
         self.frames["Lịch sử hóa đơn"] = ls_hoa_don_page
 
         # Trang "Bãi"
-        bai_frame = tk.Frame(self.main_content_frame, bg="cyan") # Dùng màu nền để dễ nhận biết
-        bai_frame.grid(row=0, column=0, sticky="nsew")
-        tk.Label(bai_frame, text="Đây là trang Quản lý Bãi", font=("Segoe UI", 24)).pack(pady=100)
-        self.frames["Bãi"] = bai_frame
+        yard_page = YardView(self.main_content_frame, self)
+        yard_page.grid(row=0, column=0, sticky="nsew")
+        self.frames["Bãi"] = yard_page
         
         # Trang "Công nợ"
-        cong_no_frame = tk.Frame(self.main_content_frame, bg="magenta") # Dùng màu nền để dễ nhận biết
-        cong_no_frame.grid(row=0, column=0, sticky="nsew")
-        tk.Label(cong_no_frame, text="Đây là trang Quản lý Công nợ", font=("Segoe UI", 24)).pack(pady=100)
-        self.frames["Công nợ"] = cong_no_frame
+        cong_no_page = CongNoView(self.main_content_frame, self)
+        cong_no_page.grid(row=0, column=0, sticky="nsew")
+        self.frames["Công nợ"] = cong_no_page
 
     def show_tab(self, tab_name):
         frame_to_show = self.frames[tab_name]
