@@ -49,7 +49,7 @@ class LsHoaDonView(tk.Frame):
         # chúng ta có thể chỉ nạp dữ liệu ở lần hiển thị đầu tiên.
         # Nếu muốn nó luôn làm mới mỗi khi chuyển tab, hãy bỏ điều kiện if.
         if not self._data_loaded_once:
-            print("Tab Lịch sử được hiển thị lần đầu, đang nạp dữ liệu...") # Dòng debug
+            # print("Tab Lịch sử được hiển thị lần đầu, đang nạp dữ liệu...") # Dòng debug
             self.load_hoa_don_data('khach_hang')
             self._data_loaded_once = True
 

@@ -3,6 +3,7 @@ from tkinter import ttk
 from tkinter import messagebox
 from datetime import date
 from tkcalendar import DateEntry
+import customtkinter as ctk
 
 # Dữ liệu giả lập (bạn sẽ thay thế bằng cách truy vấn từ database)
 # Dữ liệu khách hàng: (id, ten, dia_chi, sdt, loai_kh)
@@ -104,9 +105,9 @@ class TaoHoaDonView(tk.Frame):
         self.thanh_tien_var = tk.StringVar(value="0 VNĐ")
         tk.Label(left_frame, textvariable=self.thanh_tien_var, font=("Segoe UI", 12, "bold"), bg="#f7f9fc").grid(row=8, column=1, sticky="w", pady=5)
 
-        add_button = tk.Button(left_frame, text=" Thêm vào đơn hàng", command=self.add_item_to_order, 
-                               font=("Segoe UI", 12, "bold"), bg="#27ae60", fg="white", relief="flat",
-                               compound="left", padx=15, pady=8)
+        add_button = ctk.CTkButton(left_frame, text=" Thêm vào đơn hàng", command=self.add_item_to_order, 
+                               font=("Segoe UI", 12, "bold"), fg_color="#27ae60",
+                               compound="left")
         add_button.grid(row=9, column=0, columnspan=2, pady=20)
 
         # --- 2. Frame bên phải: Thông tin hóa đơn ---
@@ -167,10 +168,10 @@ class TaoHoaDonView(tk.Frame):
         final_button_frame = tk.Frame(right_frame, bg="white", pady=10)
         final_button_frame.grid(row=4, column=0, sticky="ew")
         
-        tk.Button(final_button_frame, text=" Hủy đơn hàng", command=self.cancel_order,
-                  font=("Segoe UI", 12, "bold"), bg="#bdc3c7", fg="black", relief="flat", padx=15, pady=8).pack(side="left", expand=True, padx=5)
-        tk.Button(final_button_frame, text=" Hoàn thành", command=self.complete_order,
-                  font=("Segoe UI", 12, "bold"), bg="#007bff", fg="white", relief="flat", padx=15, pady=8).pack(side="left", expand=True, padx=5)
+        ctk.CTkButton(final_button_frame, text=" Hủy đơn hàng", command=self.cancel_order,
+                  font=("Segoe UI", 12, "bold"), fg_color="#bdc3c7").pack(side="left", expand=True)
+        ctk.CTkButton(final_button_frame, text=" Hoàn thành", command=self.complete_order,
+                  font=("Segoe UI", 12, "bold"), fg_color="#007bff").pack(side="left", expand=True)
 
     def on_customer_select(self, event):
         selected_name = self.khach_hang_var.get()

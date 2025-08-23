@@ -5,10 +5,13 @@ from PIL import Image, ImageTk
 
 # Import Controller
 from controllers.products_controller import ProductController
+from controllers.yard_controller import YardController
+from controllers.customer_controller import CustomerController
 
 # Import Model
 from models.base_model import BaseModel
 from models.products_model import ProductModel
+from models.yard_model import YardModel
 
 # Import class view từ file đã tách
 from views.products_view import MatHangView
@@ -141,6 +144,7 @@ class App(tk.Tk):
 
         khach_hang_page = KhachHangView(self.main_content_frame, self)
         khach_hang_page.grid(row=0, column=0, sticky='nsew')
+        self.yard_controller = CustomerController(view=khach_hang_page, db_path=self.db_path)
         self.frames["Khách hàng"] = khach_hang_page
  
         tao_hoa_don_page = TaoHoaDonView(self.main_content_frame, self)
@@ -154,6 +158,7 @@ class App(tk.Tk):
         # Trang "Bãi"
         yard_page = YardView(self.main_content_frame, self)
         yard_page.grid(row=0, column=0, sticky="nsew")
+        self.yard_controller = YardController(view=yard_page, db_path=self.db_path)
         self.frames["Bãi"] = yard_page
         
         # Trang "Công nợ"
@@ -169,3 +174,4 @@ class App(tk.Tk):
 if __name__ == "__main__":
     app = App()
     app.mainloop()
+    

@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox # Import messagebox để hiện thông báo
-import sqlite3
 import customtkinter as ctk
 from datetime import datetime
 from views.config import db_path
@@ -123,7 +122,7 @@ class CongNoView(tk.Frame):
             text="Cập nhật",
             command=self.update_cong_no,
             font=("Segoe UI", 11, "bold"),
-            fg_color="#3DB581",
+            fg_color="#27ae60",
             corner_radius=10,  # Thêm bo góc
             height=30,         # Chiều cao nút
             width=100          # Chiều rộng nút

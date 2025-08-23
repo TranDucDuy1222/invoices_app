@@ -57,6 +57,22 @@ class ProductModel(BaseModel):
             )
         conn.commit()
         conn.close()
+    
+    def update_item(self, selected_id, id_bai, ten, gia_int, donvi):
+        conn = sqlite3.connect("database/CSP_0708.db")
+        cursor = conn.cursor()
+        if id_bai is not None:
+            cursor.execute(
+                "UPDATE products SET ten_sp=?, don_vi_tinh=?, gia_ban=?, id_bai=? WHERE id_sp=?",
+                (ten, donvi, gia_int, id_bai, selected_id)
+            )
+        else:
+            cursor.execute(
+                "UPDATE products SET ten_sp=?, don_vi_tinh=?, gia_ban=? WHERE id_sp=?",
+                (ten, donvi, gia_int, selected_id)
+            )
+        conn.commit()
+        conn.close()
 
     def delete_item(self, selected_id):
         conn = sqlite3.connect("database/CSP_0708.db")
