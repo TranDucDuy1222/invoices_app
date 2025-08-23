@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 
 # Import Controller
 from controllers.products_controller import ProductController
+from controllers.debt_controller import DebtController
 
 # Import Model
 from models.base_model import BaseModel
@@ -16,7 +17,7 @@ from views.khach_hang import KhachHangView
 from views.hoa_don import TaoHoaDonView
 from views.lich_su_hoa_don import LsHoaDonView
 from views.bai import YardView
-from views.cong_no import CongNoView
+from views.debt_view import CongNoView
 
 class App(tk.Tk):
     def __init__(self):
@@ -160,6 +161,7 @@ class App(tk.Tk):
         cong_no_page = CongNoView(self.main_content_frame, self)
         cong_no_page.grid(row=0, column=0, sticky="nsew")
         self.frames["Công nợ"] = cong_no_page
+        self.debt_controller = DebtController(view=cong_no_page, db_path=self.db_path)
 
     def show_tab(self, tab_name):
         frame_to_show = self.frames[tab_name]

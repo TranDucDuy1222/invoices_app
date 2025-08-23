@@ -1,5 +1,4 @@
 from models.products_model import ProductModel
-import sqlite3
 from views.config import db_path
 from tkinter import messagebox
 
