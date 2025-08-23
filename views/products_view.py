@@ -342,6 +342,7 @@ class MatHangView(tk.Frame):
     
     def delete_item(self):
         selected_id = self.form_fields_mh["ID:"].get()
+        selected_tree_item = self.tree_mh.selection()
         if not selected_id:
             messagebox.showwarning("Cảnh báo", "Vui lòng chọn một mặt hàng để xóa!")
             return
@@ -351,7 +352,10 @@ class MatHangView(tk.Frame):
             return
         # Gọi phương thức delete_item từ controller
         self.controller.delete_item(selected_id)
-        # Xóa thông tin chi tiết trên form
-        # for var in self.form_fields_mh.values():
-        #     var.set("")
+        self.tree_mh.delete(selected_tree_item)
+        self.clear_details_form()
         
+    def clear_details_form(self):
+        """Xóa toàn bộ nội dung trong các ô Entry của form chi tiết."""
+        for var in self.form_fields_mh.values():
+            var.set("")

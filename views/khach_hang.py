@@ -237,6 +237,7 @@ class KhachHangView(tk.Frame):
     
     def delete_customer(self):
         selected_id = self.form_fields_kh["ID:"].get()
+        selected_tree_item = self.tree_kh.selection()
         if not selected_id:
             messagebox.showwarning("Cảnh báo", "Vui lòng chọn một khách hàng để xóa!")
             return
@@ -246,5 +247,10 @@ class KhachHangView(tk.Frame):
             # Gọi phương thức delete_item từ controller
             self.controller.delete_customer(selected_id)
             # Xóa thông tin trong form
-            for var in self.form_fields_kh.values():
-                var.set("")
+            self.tree_kh.delete(selected_tree_item)
+            self.clear_details_form()
+
+    def clear_details_form(self):
+        """Xóa toàn bộ nội dung trong các ô Entry của form chi tiết."""
+        for var in self.form_fields_kh.values():
+            var.set("")

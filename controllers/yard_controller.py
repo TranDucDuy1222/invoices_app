@@ -57,7 +57,6 @@ class YardController:
             # Gọi phương thức delete_item từ model
             self.model.delete_yard(selected_id)
             messagebox.showinfo("Thành công", "Đã xóa mặt hàng!")
-            self.reload_data()  # Tải lại danh sách sau khi xóa
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể xóa mặt hàng: {e}")
     

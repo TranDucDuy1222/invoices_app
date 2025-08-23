@@ -240,6 +240,7 @@ class YardView(tk.Frame):
     
     def delete_yard(self):
         selected_id = self.form_fields_y["ID:"].get()
+        selected_tree_item = self.tree_y.selection()
         if not selected_id:
             messagebox.showwarning("Cảnh báo", "Vui lòng chọn một bãi để xóa!")
             return
@@ -249,4 +250,12 @@ class YardView(tk.Frame):
             return
         # Gọi phương thức delete_item từ controller
         self.controller.delete_yard(selected_id)
+        # Xóa thông tin trong form
+        self.tree_y.delete(selected_tree_item)
+        self.clear_details_form()
+
+    def clear_details_form(self):
+        """Xóa toàn bộ nội dung trong các ô Entry của form chi tiết."""
+        for var in self.form_fields_y.values():
+            var.set("")
         

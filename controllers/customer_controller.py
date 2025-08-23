@@ -57,7 +57,6 @@ class CustomerController:
             # Gọi phương thức delete_item từ model
             self.model.delete_customer(selected_id)
             messagebox.showinfo("Thành công", "Đã xóa thông tin khách hàng!")
-            self.reload_data()  # Tải lại danh sách sau khi xóa
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể xóa thông tin khách hàng: {e}")
     
