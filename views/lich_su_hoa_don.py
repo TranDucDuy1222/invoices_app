@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox # Import messagebox để hiện thông báo
+from datetime import datetime
+
 
 hoa_don_kh_data = [
     (102, '25/10/2023', 'Nguyễn Thành Công', '123 ABC, Q1, HCM', '0708662504', 3500000, 'Đã thanh toán', 'khach_hang'),
@@ -186,7 +188,127 @@ class LsHoaDonView(tk.Frame):
         for i, btn_text in enumerate(buttons):
             tk.Button(final_button_frame, text=btn_text, font=("Segoe UI", 10), relief="groove").grid(row=0, column=i, sticky="ew", padx=2)
 
+        final_button_frame = tk.Frame(right_frame, bg="#f7f9fc", pady=10)
+        final_button_frame.grid(row=5, column=0, sticky="ew")
+
+        # Chia đều không gian cho 5 nút
+        final_button_frame.grid_columnconfigure((0, 1, 2, 3, 4), weight=1) 
+
+        # Tạo các nút
+        tk.Button(final_button_frame, text="Chốt hóa đơn", font=("Segoe UI", 10), relief="groove").grid(row=0, column=0, sticky="ew", padx=2)
+        tk.Button(final_button_frame, text="Thanh toán", font=("Segoe UI", 10), relief="groove").grid(row=0, column=1, sticky="ew", padx=2)
+        tk.Button(final_button_frame, text="In lại", font=("Segoe UI", 10), relief="groove").grid(row=0, column=2, sticky="ew", padx=2)
+        tk.Button(final_button_frame, text="Xóa hóa đơn", font=("Segoe UI", 10), relief="groove").grid(row=0, column=3, sticky="ew", padx=2)
+        
+        # Nút "Xem trước" - gán command cho nó
+        preview_btn = tk.Button(
+            final_button_frame, 
+            text="Xem trước", 
+            font=("Segoe UI", 10), 
+            relief="groove",
+            command=self.show_invoice_preview # <-- GÁN LỆNH Ở ĐÂY
+        )
+        preview_btn.grid(row=0, column=4, sticky="ew", padx=2)
     # --- Các phương thức xử lý sự kiện ---
+
+    def show_invoice_preview(self):
+        selected_items = self.tree_hd.selection()
+        if not selected_items:
+            messagebox.showwarning("Chưa chọn hóa đơn", "Vui lòng chọn một hóa đơn để xem trước.")
+            return
+        customer_name = self.info_vars["Tên khách hàng:"].get()
+        customer_phone = self.info_vars["Số điện thoại:"].get()
+
+        preview_window = tk.Toplevel(self.root_window)
+        preview_window.title(f"Xem trước hóa đơn - Khách hàng: {customer_name}")
+        preview_window.geometry("900x650")
+        preview_window.configure(bg="lightgrey")
+        preview_window.transient(self.root_window)
+        preview_window.grab_set()
+
+        container = tk.Frame(preview_window)
+        container.pack(fill="both", expand=True)
+        canvas = tk.Canvas(container, bg="white")
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollable_frame = tk.Frame(canvas, bg="white", padx=30, pady=30)
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        
+        def on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        scrollable_frame.bind("<Configure>", on_frame_configure)
+        header_frame = tk.Frame(scrollable_frame, bg="white")
+        header_frame.pack(fill="x")
+        header_left = tk.Frame(header_frame, bg="white")
+        header_left.pack(side="left")
+        tk.Label(header_left, text="CỬA HÀNG VLXD VÀ SAN LẤP MẶT BẰNG NGUYỄN ĐẠT", font=("Arial", 12, "bold"), bg="white", justify="left").pack(anchor="w")
+        tk.Label(header_left, text="MST: 0314412607", font=("Arial", 10), bg="white").pack(anchor="w")
+        tk.Label(header_left, text="Địa chỉ: 149A, Lý Thế Kiệt, P. Linh Đông, Q. Thủ Đức, TP.HCM", font=("Arial", 10), bg="white").pack(anchor="w")
+        tk.Label(header_left, text="Liên hệ: 0977.209.709 (Đạt) - 0967.209.709 (Trinh)", font=("Arial", 10), bg="white").pack(anchor="w")
+        header_right = tk.Frame(header_frame, bg="white")
+        header_right.pack(side="right")
+        ngay_lap = self.info_vars["Ngày lập:"].get()
+        tk.Label(header_right, text=f"Ngày nhập: {ngay_lap}", font=("Arial", 10, "italic"), bg="white").pack(anchor="e")
+        tk.Label(header_right, text=f"Ngày in: {datetime.now().strftime('%d/%m/%Y %H:%M')}", font=("Arial", 10, "italic"), bg="white").pack(anchor="e")
+        tk.Label(scrollable_frame, text="HÓA ĐƠN BÁN HÀNG", font=("Arial", 20, "bold"), bg="white", pady=20).pack()
+        customer_frame = tk.Frame(scrollable_frame, bg="white")
+        customer_frame.pack(fill="x", pady=10)
+        tk.Label(customer_frame, text=f"Tên khách hàng: {customer_name}", font=("Arial", 10, "bold"), bg="white").pack(anchor="w")
+        tk.Label(customer_frame, text=f"Số điện thoại: {customer_phone}", font=("Arial", 10), bg="white").pack(anchor="w")
+        details_tree_frame = tk.Frame(scrollable_frame, bg="white")
+        details_tree_frame.pack(fill="x", pady=10)
+        detail_cols = ("ngay_dat", "mat_hang", "so_luong", "gia", "thanh_tien", "ghi_chu")
+        num_items = len(self.tree_detail.get_children())
+        preview_tree = ttk.Treeview(details_tree_frame, columns=detail_cols, show="headings", height=num_items)
+        preview_tree.heading("ngay_dat", text="Ngày đặt")
+        preview_tree.heading("mat_hang", text="Mặt hàng")
+        preview_tree.heading("so_luong", text="Số lượng")
+        preview_tree.heading("gia", text="Đơn giá")
+        preview_tree.heading("thanh_tien", text="Thành tiền")
+        preview_tree.heading("ghi_chu", text="Ghi chú (Nơi giao)")
+        preview_tree.column("ngay_dat", width=100, anchor="center")
+        preview_tree.column("so_luong", width=80, anchor="center")
+        preview_tree.column("gia", width=120, anchor="e")
+        preview_tree.column("thanh_tien", width=120, anchor="e")
+        preview_tree.column("mat_hang", width=200)
+
+        # Vòng lặp for để chèn dữ liệu
+        for item_id in self.tree_detail.get_children():
+            item_data = self.tree_detail.item(item_id, 'values')
+            ngay_dat, mat_hang, so_luong, gia_str, noi_giao = item_data
+            try:
+                gia = int(gia_str.replace(".", ""))
+                thanh_tien = gia * float(so_luong)
+                thanh_tien_f = f"{thanh_tien:,.0f}".replace(",", ".")
+            except:
+                thanh_tien_f = "Lỗi"
+            preview_tree.insert("", "end", values=(ngay_dat, mat_hang, so_luong, gia_str, thanh_tien_f, noi_giao))
+        
+        # Dòng này phải nằm ngoài vòng lặp for, ở cùng cấp độ thụt lề
+        preview_tree.pack(fill="x")
+
+        footer_frame = tk.Frame(scrollable_frame, bg="white", pady=20)
+        footer_frame.pack(fill="x")
+        footer_frame.grid_columnconfigure((0, 1), weight=1)
+        footer_left = tk.Frame(footer_frame, bg="white")
+        footer_left.grid(row=0, column=0, sticky="n")
+        tk.Label(footer_left, text=f"Ngày {datetime.now().day} tháng {datetime.now().month} năm {datetime.now().year}", font=("Arial", 10, "italic"), bg="white").pack()
+        tk.Label(footer_left, text="Người lập phiếu", font=("Arial", 10, "bold"), bg="white").pack(pady=(10,0))
+        footer_right = tk.Frame(footer_frame, bg="white")
+        footer_right.grid(row=0, column=1, sticky="e")
+        tong_tien = self.summary_vars["Tổng tiền:"].get()
+        no_cu = self.summary_vars["Nợ cũ:"].get()
+        tong_no = self.summary_vars["TỔNG NỢ:"].get()
+        tk.Label(footer_right, text=f"Tổng tiền hàng: {tong_tien}", font=("Arial", 10), bg="white").pack(anchor="e")
+        tk.Label(footer_right, text=f"Nợ cũ: {no_cu}", font=("Arial", 10), bg="white").pack(anchor="e")
+        tk.Label(footer_right, text=f"Tổng nợ: {tong_no}", font=("Arial", 12, "bold"), bg="white").pack(anchor="e")
+        
+        action_frame = tk.Frame(preview_window, bg="white", pady=10)
+        action_frame.pack(fill="x", side="bottom", padx=30)
+        tk.Button(action_frame, text="In Hóa Đơn", font=("Arial", 10, "bold")).pack(side="right", padx=5)
+        tk.Button(action_frame, text="Đóng", command=preview_window.destroy).pack(side="right")
     
     def load_hoa_don_data(self, loai_hd):
         """Tải dữ liệu hóa đơn vào bảng bên trái."""
