@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox # Import messagebox để hiện thông báo
 import sqlite3
+import customtkinter as ctk
 from views.config import db_path
 
 class MatHangView(tk.Frame):
@@ -28,7 +29,7 @@ class MatHangView(tk.Frame):
         columns = ("id", "ten_mat_hang", "don_vi", "gia", "ten_bai")
         self.tree_mh = ttk.Treeview(left_frame, columns=columns, show="headings", selectmode="browse")
 
-        self.tree_mh.heading("id", text="STT")
+        self.tree_mh.heading("id", text="ID")
         self.tree_mh.heading("ten_mat_hang", text="Tên mặt hàng")
         self.tree_mh.heading("don_vi", text="Đơn vị")
         self.tree_mh.heading("gia", text="Giá")
@@ -86,13 +87,13 @@ class MatHangView(tk.Frame):
         button_frame.pack(pady=30, padx=20, fill="x")
         
         # Thêm các nút bấm và liên kết với các phương thức của class
-        add_btn = tk.Button(button_frame, text="Thêm", command=self.add_item_window, bg="#2ecc71", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=10)
+        add_btn = ctk.CTkButton(button_frame, text="Thêm", command=self.add_item_window, corner_radius=10, fg_color="#27ae60", font=("Segoe UI", 11), width=100)
         add_btn.pack(side="left", expand=True)
 
-        update_btn = tk.Button(button_frame, text="Sửa", command=self.update_item_window, bg="#f39c12", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=10)
+        update_btn = ctk.CTkButton(button_frame, text="Sửa", command=self.update_item_window, corner_radius=10, fg_color="#f39c12", font=("Segoe UI", 11), width=100)
         update_btn.pack(side="left", expand=True, padx=10)
         
-        delete_btn = tk.Button(button_frame, text="Xóa", command=self.delete_item, bg="#e74c3c", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=10)
+        delete_btn = ctk.CTkButton(button_frame, text="Xóa", command=self.delete_item, corner_radius=10, fg_color="#e74c3c", font=("Segoe UI", 11), width=100)
         delete_btn.pack(side="left", expand=True)    
 
     # Hiển thị sản phẩm
@@ -105,20 +106,19 @@ class MatHangView(tk.Frame):
             self.tree_mh.delete(item)
         for item in data:
             self.tree_mh.insert("", "end", values=item)
+        # Tự động chọn dòng đầu tiên sau khi cập nhật
+        # children = self.tree_mh.get_children()
+        # if children:
+        #     self.tree_mh.selection_set(children[0])
+        #     self.tree_mh.focus(children[0])
 
     # Chọn một mặt hàng trong Treeview và cập nhật thông tin vào các ô Entry
     def on_item_select(self, event):
-        # Lấy dòng được chọn từ Treeview của class (self.tree_mh)
         selected_items = self.tree_mh.selection()
-        
-        # Nếu không có dòng nào được chọn (ví dụ: khi xóa dòng cuối), thì thoát
         if not selected_items:
             return
-
-        # selected_items là một tuple, lấy phần tử đầu tiên
-        item_id_in_tree = selected_items[0]
         
-        # Lấy dữ liệu từ dòng được chọn
+        item_id_in_tree = selected_items[0]
         values = self.tree_mh.item(item_id_in_tree, "values")
         
         # Cập nhật dữ liệu lên các ô Entry thông qua dictionary của class (self.form_fields_mh)
@@ -208,80 +208,66 @@ class MatHangView(tk.Frame):
 
             # Gọi phương thức add_item từ controller
             self.controller.add_item(id_bai, ten, gia_int, donvi)
+            close_add_window()
+        
+        def close_add_window():
             add_window.destroy()
 
         # Nút lưu và hủy
         button_frame_add = tk.Frame(form_add, bg="#f7f9fc")
         button_frame_add.pack(fill="x", pady=(20, 0))
 
-        add_btn = tk.Button(button_frame_add, text="Lưu", command=save_new_item, bg="#2ecc71", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=10)
+        add_btn = ctk.CTkButton(button_frame_add, text="Lưu", command=save_new_item, fg_color="#2ecc71", font=("Segoe UI", 10, "bold"), width=100)
         add_btn.pack(side="right", padx=5)
 
-        cancel_btn = tk.Button(button_frame_add, text="Hủy", command=add_window.destroy, bg="#e74c3c", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=10)
+        cancel_btn = ctk.CTkButton(button_frame_add, text="Hủy", command=close_add_window, fg_color="#e74c3c", font=("Segoe UI", 10, "bold"), width=100)
         cancel_btn.pack(side="right")
 
     # Hàm này sẽ được gọi từ Controller để lấy danh sách bãi
     def set_yard_list(self, load_yards):
         self.display_yard_info = []
         self.display_yard_info = load_yards
-        print (load_yards)
     
     # Hàm này bạn cần tự định nghĩa để load lại danh sách mặt hàng từ database
-    def reload_products_list(self):
-        try:
-            conn = sqlite3.connect("database/CSP_0708.db")
-            cursor = conn.cursor()
-            cursor.execute("""SELECT p.id_sp, p.ten_sp, p.don_vi_tinh, p.gia_ban, 
-                   IFNULL(y.ten_bai, 'Không có bãi')
-            FROM products p
-            LEFT JOIN yards y ON p.id_bai = y.id_bai""")
-            data = cursor.fetchall()
-            conn.close()
-            self.set_products_list(data)
-        except Exception as e:
-            messagebox.showerror("Lỗi", f"Không thể tải danh sách mặt hàng: {e}")
+    # def reload_products_list(self):
+    #     try:
+    #         conn = sqlite3.connect("database/CSP_0708.db")
+    #         cursor = conn.cursor()
+    #         cursor.execute("""SELECT p.id_sp, p.ten_sp, p.don_vi_tinh, p.gia_ban, 
+    #                IFNULL(y.ten_bai, 'Không có bãi')
+    #         FROM products p
+    #         LEFT JOIN yards y ON p.id_bai = y.id_bai""")
+    #         data = cursor.fetchall()
+    #         conn.close()
+    #         self.set_products_list(data)
+    #     except Exception as e:
+    #         messagebox.showerror("Lỗi", f"Không thể tải danh sách mặt hàng: {e}")
     
-    # Phương thức để cập nhật mặt hàng đã chọn
     def update_item_window(self):
-        # Kiểm tra và lấy thông tin mặt hàng
+        self.set_yard_list(load_yards=self.controller.model.get_yard_info())
         selected_id = self.form_fields_mh["ID:"].get()
         if not selected_id:
             messagebox.showwarning("Cảnh báo", "Vui lòng chọn một mặt hàng để sửa!")
             return
-
-        # Lấy thông tin hiện tại từ các ô Entry của form chính
-        current_name = self.form_fields_mh["Tên mặt hàng:"].get()
-        current_unit = self.form_fields_mh["Đơn vị:"].get()
-        current_price_str = self.form_fields_mh["Giá:"].get().replace(".", "") # Loại bỏ dấu chấm
-        current_yard = self.form_fields_mh["Bãi:"].get() 
         
-        
-        # Tạo cửa sổ chức năng sửa mặt hàng
+        # Tạo cửa sổ sửa mặt hàng
         edit_window = tk.Toplevel(self.root_window)
-        edit_window.title(f"Sửa mặt hàng")
+        edit_window.title("Sửa mặt hàng")
         edit_window.geometry("400x300")
         edit_window.resizable(False, False)
         edit_window.configure(bg="#f7f9fc")
-        
         edit_window.transient(self.root_window)
-        edit_window.grab_set()
 
-        # Tạo form trong cửa sổ
         form_edit = tk.Frame(edit_window, bg="#f7f9fc", padx=20, pady=20)
         form_edit.pack(expand=True, fill="both")
-        
-        # Tạo các biến và widget cho form sửa
-        # name_var = tk.StringVar(value=current_name)
-        # unit_var = tk.StringVar(value=current_unit)
-        # price_var = tk.StringVar(value=current_price_str)
 
-        fields_to_edit = {
-            "Tên mặt hàng:": tk.StringVar(value=current_name),
-            "Đơn vị:": tk.StringVar(value=current_unit),
-            "Giá:": tk.StringVar(value=current_price_str),
-        } 
-        
-        for label_text, var in fields_to_edit.items():
+        field_to_edit = {
+            "Tên mặt hàng:": tk.StringVar(value=self.form_fields_mh["Tên mặt hàng:"].get()),
+            "Đơn vị:": tk.StringVar(value=self.form_fields_mh["Đơn vị:"].get()),
+            "Giá:": tk.StringVar(value=self.form_fields_mh["Giá:"].get().replace(".", "").replace(",", "")) # Loại bỏ dấu chấm
+        }
+
+        for label_text, var in field_to_edit.items():
             row = tk.Frame(form_edit, bg="#f7f9fc")
             row.pack(fill="x", pady=8)
             label = tk.Label(row, text=label_text, width=12, anchor="w", bg="#f7f9fc", font=("Segoe UI", 10))
@@ -289,45 +275,74 @@ class MatHangView(tk.Frame):
             entry = tk.Entry(row, textvariable=var, font=("Segoe UI", 10))
             entry.pack(side="left", expand=True, fill="x")
 
-        # Tạo trường chọn bãi
         yard_names = [yard[1] for yard in self.display_yard_info]
-
-        # 2. Tạo các widget cho dòng chọn bãi
         yard_row = tk.Frame(form_edit, bg="#f7f9fc")
         yard_row.pack(fill="x", pady=8)
-        
         yard_label = tk.Label(yard_row, text="Bãi:", width=12, anchor="w", bg="#f7f9fc", font=("Segoe UI", 10))
         yard_label.pack(side="left")
-
         yard_var = tk.StringVar()
-        # Thêm lựa chọn "Không có bãi" vào đầu danh sách
         yard_options = ["Không có bãi"] + yard_names
-         
         yard_combo = ttk.Combobox(yard_row, 
-                                textvariable=yard_var, 
-                                values=yard_options, 
-                                state="readonly", # Ngăn người dùng nhập tự do
-                                font=("Segoe UI", 10))
+                                  textvariable=yard_var, 
+                                  values=yard_options, 
+                                  state="readonly", 
+                                  font=("Segoe UI", 10))
         yard_combo.pack(side="left", expand=True, fill="x")
+        current_yard = self.form_fields_mh["Bãi:"].get()
         if current_yard and current_yard in yard_options:
             yard_combo.set(current_yard)
         else:
             yard_combo.set("Không có bãi")
-        # print("current_yard:", repr(current_yard))
-        # print("current_yard in yard_options:", current_yard in yard_options)
-        
-        # Tạo nút lưu và nút hủy
+        # Hàm lưu mặt hàng đã sửa
+        def save_edited_item():
+            ten = field_to_edit["Tên mặt hàng:"].get().strip()
+            donvi = field_to_edit["Đơn vị:"].get().strip()
+            gia = field_to_edit["Giá:"].get().replace(".", "").replace(",", "").strip()
+            bai = yard_var.get()
+
+            if not ten or not donvi or not gia:
+                messagebox.showwarning("Thiếu thông tin", "Vui lòng nhập đầy đủ thông tin!")
+                return
+            try:
+                gia_int = int(gia)
+            except ValueError:
+                messagebox.showerror("Lỗi", "Giá phải là số nguyên!")
+                return
+
+            # Lấy id_bai nếu có chọn bãi
+            id_bai = None
+            if bai != "Không có bãi":
+                for yard in self.display_yard_info:
+                    if yard[1] == bai:
+                        id_bai = yard[0]
+                        break
+
+            # Gọi phương thức update_item từ controller
+            self.controller.update_item(selected_id, id_bai, ten, gia_int, donvi)
+            edit_window.destroy()
+            # Chọn lại sản phẩm vừa sửa trong Treeview
+            for item in self.tree_mh.get_children():
+                if self.tree_mh.item(item, "values")[0] == selected_id:
+                    self.tree_mh.selection_set(item)
+                    self.tree_mh.focus(item)
+                    self.tree_mh.see(item)
+                    self.on_item_select(None)  # Gọi lại hàm cập nhật chi tiết
+                    break
+        def close_edit_window():
+            edit_window.destroy()
+        # Nút lưu và hủy
         button_frame_edit = tk.Frame(form_edit, bg="#f7f9fc")
         button_frame_edit.pack(fill="x", pady=(20, 0))
-
-        edit_btn = tk.Button(button_frame_edit, text="Lưu", bg="#f39c12", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=12)
+        
+        edit_btn = ctk.CTkButton(button_frame_edit, text="Lưu", command=save_edited_item, fg_color="#f39c12", font=("Segoe UI", 10, "bold"), width=100)
         edit_btn.pack(side="right", padx=5)
-
-        cancel_btn = tk.Button(button_frame_edit, text="Hủy", command=edit_window.destroy, bg="#e74c3c", fg="white", font=("Segoe UI", 10, "bold"), relief="flat", width=10)
+        cancel_btn = ctk.CTkButton(button_frame_edit, text="Hủy", command=close_edit_window, fg_color="#e74c3c", font=("Segoe UI", 10, "bold"), width=100)
         cancel_btn.pack(side="right")
+
     
     def delete_item(self):
         selected_id = self.form_fields_mh["ID:"].get()
+        selected_tree_item = self.tree_mh.selection()
         if not selected_id:
             messagebox.showwarning("Cảnh báo", "Vui lòng chọn một mặt hàng để xóa!")
             return
@@ -337,4 +352,10 @@ class MatHangView(tk.Frame):
             return
         # Gọi phương thức delete_item từ controller
         self.controller.delete_item(selected_id)
+        self.tree_mh.delete(selected_tree_item)
+        self.clear_details_form()
         
+    def clear_details_form(self):
+        """Xóa toàn bộ nội dung trong các ô Entry của form chi tiết."""
+        for var in self.form_fields_mh.values():
+            var.set("")

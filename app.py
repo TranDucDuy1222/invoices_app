@@ -5,16 +5,20 @@ from PIL import Image, ImageTk
 
 # Import Controller
 from controllers.products_controller import ProductController
+from controllers.yard_controller import YardController
+from controllers.customer_controller import CustomerController
 from controllers.debt_controller import DebtController
+from controllers.invoice_controller import InvoiceController
 
 # Import Model
 from models.base_model import BaseModel
 from models.products_model import ProductModel
+from models.yard_model import YardModel
 
 # Import class view từ file đã tách
 from views.products_view import MatHangView
 from views.khach_hang import KhachHangView
-from views.hoa_don import TaoHoaDonView
+from views.invoice_view import TaoHoaDonView
 from views.lich_su_hoa_don import LsHoaDonView
 from views.bai import YardView
 from views.debt_view import CongNoView
@@ -142,11 +146,13 @@ class App(tk.Tk):
 
         khach_hang_page = KhachHangView(self.main_content_frame, self)
         khach_hang_page.grid(row=0, column=0, sticky='nsew')
+        self.yard_controller = CustomerController(view=khach_hang_page, db_path=self.db_path)
         self.frames["Khách hàng"] = khach_hang_page
  
         tao_hoa_don_page = TaoHoaDonView(self.main_content_frame, self)
         tao_hoa_don_page.grid(row=0, column=0, sticky='nsew')
         self.frames["Tạo hóa đơn"] = tao_hoa_don_page
+        # self.invoice_controller = InvoiceController(view=tao_hoa_don_page, db_path=self.db_path)
         
         ls_hoa_don_page = LsHoaDonView(self.main_content_frame, self)
         ls_hoa_don_page.grid(row=0, column=0, sticky='nsew')
@@ -155,6 +161,7 @@ class App(tk.Tk):
         # Trang "Bãi"
         yard_page = YardView(self.main_content_frame, self)
         yard_page.grid(row=0, column=0, sticky="nsew")
+        self.yard_controller = YardController(view=yard_page, db_path=self.db_path)
         self.frames["Bãi"] = yard_page
         
         # Trang "Công nợ"
@@ -171,3 +178,4 @@ class App(tk.Tk):
 if __name__ == "__main__":
     app = App()
     app.mainloop()
+    

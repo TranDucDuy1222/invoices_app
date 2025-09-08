@@ -36,10 +36,10 @@ class DebtController:
             # 3. Xác định ngày cập nhật
             if payment_date:
                 # Nếu có ngày được truyền vào, sử dụng ngày đó và giữ giờ phút giây hiện tại
-                update_date = payment_date.strftime('%d/%m/%Y') + " " + datetime.now().strftime('%H:%M:%S')
+                update_date = payment_date.strftime('%d/%m/%Y %H:%M') + " " + datetime.now().strftime('%H:%M:%S')
             else:
                 # Nếu không, lấy ngày giờ hiện tại
-                update_date = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                update_date = datetime.now().strftime('%d/%m/%Y %H:%M')
 
             # Kiểm tra nếu số tiền thanh toán lớn hơn công nợ
             if payment_amount > debt_before_payment:

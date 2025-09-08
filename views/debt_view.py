@@ -4,6 +4,7 @@ from tkinter import messagebox # Import messagebox để hiện thông báo
 import customtkinter as ctk
 from datetime import datetime
 from tkcalendar import DateEntry
+from tkinter import font
 from controllers.debt_controller import DebtController
 
 class CongNoView(tk.Frame):
@@ -46,9 +47,7 @@ class CongNoView(tk.Frame):
             textvariable=self.search_var,
             fg_color="white", 
             text_color="black",
-            font=("Arial", 11),  # Đổi sang Arial hoặc Tahoma nếu vẫn lỗi
-            # placeholder_text="Tìm kiếm khách hàng...",
-            # placeholder_text_color="#7E7E7E",
+            font=("Arial", 11),  
             corner_radius=10,
             border_width=2,
             border_color="#474646"
@@ -83,16 +82,21 @@ class CongNoView(tk.Frame):
         for col in cols:
             if col != "ten_kh":
                 self.tree_cn.column(col, width=120, anchor="e") # Căn phải cho các cột số
-        scrollbar = ttk.Scrollbar(tree_container, orient="vertical", command=self.tree_cn.yview)
-        self.tree_cn.configure(yscrollcommand=scrollbar.set)
-        self.tree_cn.grid(row=0, column=0, sticky="nsew")
-        scrollbar.grid(row=0, column=1, sticky="ns")
-        self.tree_cn.bind("<<TreeviewSelect>>", self.on_cong_no_select)
+                scrollbar = ttk.Scrollbar(tree_container, orient="vertical", command=self.tree_cn.yview)
+                self.tree_cn.configure(yscrollcommand=scrollbar.set)
+                self.tree_cn.grid(row=0, column=0, sticky="nsew")
+                scrollbar.grid(row=0, column=1, sticky="ns")
+                style = ttk.Style()
+                style.configure("Bold.Treeview", font=("TkDefaultFont", 10, "bold"))
 
-        # --- 2. Frame bên phải: Thông tin cập nhật ---
-        right_frame = tk.Frame(self, bg="#f7f9fc", padx=20, pady=10)
-        right_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
-        right_frame.grid_columnconfigure(1, weight=1)
+                # Áp dụng style cho toàn bộ Treeview
+                self.tree_cn.configure(style="Bold.Treeview")
+                self.tree_cn.bind("<<TreeviewSelect>>", self.on_cong_no_select)
+
+                # --- 2. Frame bên phải: Thông tin cập nhật ---
+                right_frame = tk.Frame(self, bg="#f7f9fc", padx=20, pady=10)
+                right_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+                right_frame.grid_columnconfigure(1, weight=1)
         
         tk.Label(right_frame, text="Thông tin cập nhật", font=("Segoe UI", 14, "bold"), bg="#f7f9fc").grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 20))
         
@@ -204,8 +208,10 @@ class CongNoView(tk.Frame):
         # Thêm dòng mới vào Treeview
         self.tree_cn.insert("", "end", 
             values=(ten, cong_no_cu_fmt, cong_no_dtt_fmt, tong_cong_no_fmt, ngay_cap_nhat),
-            iid=str(id_cn)
+            iid=str(id_cn),
+            tags=("bold_ten",)
         )
+        
 
     # Phương thức tải dữ liệu công nợ
     def load_debt_data(self, debts=None):

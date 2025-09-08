@@ -10,17 +10,6 @@ class ProductController:
         self.load_products()
         self.load_yards()
 
-    # def reload_products_list(self):
-    #     try:
-    #         conn = sqlite3.connect("database/CSP_0708.db")
-    #         cursor = conn.cursor()
-    #         cursor.execute("SELECT id_sp, id_bai, ten_mat_hang, don_vi_tinh, gia_ban FROM products")
-    #         data = cursor.fetchall()
-    #         conn.close()
-    #         self.view.set_products_list(data)
-    #     except Exception as e:
-    #         print("Lỗi khi load danh sách mặt hàng:", e)
-
     def load_products(self):
         """
         Lấy dữ liệu từ Model, xử lý chuỗi hiển thị, và cập nhật View.
@@ -44,7 +33,7 @@ class ProductController:
             # Định dạng giá bán với dấu phẩy
             formatted_price = f"{gia_ban:,}".replace(",", ".")
             # Tạo tuple mới với tên đã được định dạng
-            display_row = (id_sp, formatted_name, don_vi, formatted_price, ten_bai)
+            display_row = (id_sp, ten_sp, don_vi, formatted_price, ten_bai)
             display_data.append(display_row)
 
         # 3. Gọi phương thức của View để cập nhật Treeview với dữ liệu đã xử lý
@@ -62,17 +51,22 @@ class ProductController:
             self.model.add_item(id_bai, ten, gia, donvi)
             messagebox.showinfo("Thành công", "Đã thêm mặt hàng mới!")
             # Sau khi thêm, load lại danh sách mặt hàng
-            self.view.reload_products_list()
+            self.load_products()
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể thêm mặt hàng: {e}")
 
-    
+    def update_item(self, selected_id, id_bai, ten, gia_int, donvi):
+        try:
+            self.model.update_item(selected_id, id_bai, ten, gia_int, donvi)
+            messagebox.showinfo("Thành công", "Đã cập nhật thông tin mặt hàng!")
+            self.load_products()  # Tải lại danh sách sau khi cập nhật
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể cập nhật thông tin mặt hàng: {e}")
     def delete_item(self, selected_id):
         try:
             # Gọi phương thức delete_item từ model
             self.model.delete_item(selected_id)
             messagebox.showinfo("Thành công", "Đã xóa mặt hàng!")
-            self.view.reload_products_list()  # Tải lại danh sách sau khi xóa
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể xóa mặt hàng: {e}")
     
