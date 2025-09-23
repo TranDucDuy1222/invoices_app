@@ -18,7 +18,7 @@ from views.products_view import MatHangView
 from views.khach_hang import KhachHangView
 from views.hoa_don import TaoHoaDonView
 from views.lich_su_hoa_don import LsHoaDonView
-from views.bai import YardView
+from views.bai import YardVehicleManagementView
 from views.cong_no import CongNoView
 
 class App(tk.Tk):
@@ -61,7 +61,7 @@ class App(tk.Tk):
         # Key là tên tab, value là tên file icon
         tab_info = {
             "Mặt hàng": "box.png",
-            "Bãi": "truck.png",
+            "Bãi & Xe": "truck.png",
             "Khách hàng": "customer.png",
             "Tạo hóa đơn": "invoice.png",
             "Lịch sử hóa đơn": "history.png",
@@ -156,10 +156,10 @@ class App(tk.Tk):
         self.frames["Lịch sử hóa đơn"] = ls_hoa_don_page
 
         # Trang "Bãi"
-        yard_page = YardView(self.main_content_frame, self)
+        yard_page = YardVehicleManagementView(self.main_content_frame, self)
         yard_page.grid(row=0, column=0, sticky="nsew")
         self.yard_controller = YardController(view=yard_page, db_path=self.db_path)
-        self.frames["Bãi"] = yard_page
+        self.frames["Bãi & Xe"] = yard_page
         
         # Trang "Công nợ"
         cong_no_page = CongNoView(self.main_content_frame, self)

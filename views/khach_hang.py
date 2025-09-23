@@ -8,6 +8,8 @@ class KhachHangView(tk.Frame):
         super().__init__(parent, bg="white")
         
         self.root_window = root_window
+        self.selected_customer_id = None
+        self.original_customer_data = None # Biến lưu dữ liệu gốc
         self.create_widgets()
 
     def create_widgets(self):
@@ -26,10 +28,10 @@ class KhachHangView(tk.Frame):
         self.tree_kh.heading("dia_chi", text="Địa chỉ")
         self.tree_kh.heading("sdt", text="Số điện thoại")
 
-        self.tree_kh.column("id", width=50, anchor="center")
-        self.tree_kh.column("ten_khach_hang", width=200)
-        self.tree_kh.column("dia_chi", width=200)
-        self.tree_kh.column("sdt", width=120, anchor="w")
+        self.tree_kh.column("id", width=5, anchor="center")
+        self.tree_kh.column("ten_khach_hang", width=100)
+        self.tree_kh.column("dia_chi", width=100)
+        self.tree_kh.column("sdt", width=20, anchor="w")
 
         scrollbar = ttk.Scrollbar(left_frame, orient="vertical", command=self.tree_kh.yview)
         self.tree_kh.configure(yscrollcommand=scrollbar.set)
@@ -86,11 +88,38 @@ class KhachHangView(tk.Frame):
         #------ Frame chứa các nút bấm ------
         button_frame = tk.Frame(right_frame, bg="#f7f9fc")
         button_frame.pack(pady=30, padx=20, fill="x")
-        
-        ctk.CTkButton(button_frame, text="Thêm", command=self.add_customer_window, corner_radius=10, fg_color="#27ae60", font=("Segoe UI", 11), width=100).pack(side="left", expand=True, pady=5)
-        ctk.CTkButton(button_frame, text="Sửa", command=self.update_customer_window, corner_radius=10, fg_color="#f39c12", font=("Segoe UI", 11), width=100).pack(side="left", expand=True, pady=5, padx=10)
-        ctk.CTkButton(button_frame, text="Xóa", command=self.delete_customer, corner_radius=10, fg_color="#e74c3c", font=("Segoe UI", 11), width=100).pack(side="left", expand=True, pady=5)
 
+        self.button_frame = button_frame
+
+        self.add_btn = ctk.CTkButton(self.button_frame, text="Thêm", command=self.add_customer_window, corner_radius=10, fg_color="#27ae60", font=("Segoe UI", 15), width=100)
+        self.update_btn = ctk.CTkButton(self.button_frame, text="Sửa", command=self.update_customer, corner_radius=10, fg_color="#f39c12", font=("Segoe UI", 15), width=100)
+        self.cancel_btn = ctk.CTkButton(self.button_frame, text="Hủy", command=self.clear_selection_and_form, corner_radius=10, fg_color="#7f8c8d", font=("Segoe UI", 15), width=100)
+        self.delete_btn = ctk.CTkButton(self.button_frame, text="Xóa", command=self.delete_customer, corner_radius=10, fg_color="#e74c3c", font=("Segoe UI", 15), width=100)
+
+        self._show_initial_buttons()
+
+    def _show_initial_buttons(self):
+        """Chỉ hiển thị nút Thêm."""
+        self.update_btn.pack_forget()
+        self.cancel_btn.pack_forget()
+        self.delete_btn.pack_forget()
+        self.add_btn.pack(side="left", expand=True, fill="x")
+
+    def _show_edit_buttons(self):
+        """Hiển thị các nút Sửa, Hủy, Xóa."""
+        self.add_btn.pack_forget()
+        self.update_btn.pack(side="left", expand=True, pady=5)
+        self.cancel_btn.pack(side="left", expand=True, pady=5, padx=10)
+        self.delete_btn.pack(side="left", expand=True, pady=5)
+
+    def clear_selection_and_form(self):
+        """Xóa lựa chọn trên Treeview, xóa form và đặt lại các nút."""
+        if self.tree_kh.selection():
+            self.tree_kh.selection_remove(self.tree_kh.selection()[0])
+        self.clear_details_form()
+        self._show_initial_buttons()
+        self.selected_customer_id = None
+        
     def set_customer_list(self, data):
         """
         Xóa dữ liệu cũ trong bảng và hiển thị dữ liệu mới.
@@ -111,11 +140,15 @@ class KhachHangView(tk.Frame):
         # Lấy dữ liệu từ dòng được chọn
         values = self.tree_kh.item(item_id, "values")
         
+        self.original_customer_data = values # Lưu dữ liệu gốc khi chọn
         # Cập nhật dữ liệu lên các ô Entry
         self.form_fields_kh["ID:"].set(values[0])
         self.form_fields_kh["Khách hàng:"].set(values[1])
         self.form_fields_kh["Địa chỉ:"].set(values[2])
         self.form_fields_kh["Số điện thoại:"].set(values[3])
+        
+        self.selected_customer_id = values[0]
+        self._show_edit_buttons()
 
     def add_customer_window(self):
         # Tạo cửa sổ thêm mặt hàng
@@ -167,78 +200,66 @@ class KhachHangView(tk.Frame):
         cancel_btn = ctk.CTkButton(button_frame_add, text="Hủy", command=add_window.destroy, fg_color="#e74c3c", font=("Segoe UI", 10, "bold"), width=100)
         cancel_btn.pack(side="right")
     
-    def update_customer_window(self):
-        # Kiểm tra và lấy thông tin mặt hàng
+    def update_customer(self):
+        """
+        Cập nhật thông tin khách hàng trực tiếp từ form chi tiết.
+        """
+        # 1. Kiểm tra xem có khách hàng nào được chọn trong form không
         selected_id = self.form_fields_kh["ID:"].get()
         if not selected_id:
-            messagebox.showwarning("Cảnh báo", "Vui lòng chọn một bãi để sửa!")
+            messagebox.showwarning("Cảnh báo", "Vui lòng chọn một khách hàng để sửa!")
             return
 
-        # Lấy thông tin hiện tại từ các ô Entry của form chính
-        current_name = self.form_fields_kh["Khách hàng:"].get()
-        current_address = self.form_fields_kh["Địa chỉ:"].get()
-        current_sdt = self.form_fields_kh["Số điện thoại:"].get()
-        
-        # Tạo cửa sổ chức năng sửa mặt hàng
-        edit_window = tk.Toplevel(self.root_window)
-        edit_window.title(f"Sửa thông tin khách hàng")
-        edit_window.geometry("400x250")
-        edit_window.resizable(False, False)
-        edit_window.configure(bg="#f7f9fc")
-        
-        edit_window.transient(self.root_window)
-        edit_window.grab_set()
+        # 2. Lấy dữ liệu đã được người dùng chỉnh sửa từ các ô Entry
+        #    Hàm .strip() giúp loại bỏ các khoảng trắng thừa ở đầu và cuối
+        ten_kh = self.form_fields_kh["Khách hàng:"].get().strip()
+        dia_chi = self.form_fields_kh["Địa chỉ:"].get().strip()
+        so_dien_thoai = self.form_fields_kh["Số điện thoại:"].get().strip()
 
-        # Tạo form trong cửa sổ
-        form_edit = tk.Frame(edit_window, bg="#f7f9fc", padx=20, pady=20)
-        form_edit.pack(expand=True, fill="both")
+        # 3. So sánh dữ liệu mới với dữ liệu gốc
+        if self.original_customer_data:
+            _, original_ten, original_diachi, original_sdt = self.original_customer_data
+            if (ten_kh == original_ten and 
+                dia_chi == original_diachi and 
+                so_dien_thoai == original_sdt):
+                messagebox.showinfo("Thông báo", "Không có thay đổi nào để cập nhật.")
+                return
 
-        fields_to_edit = {
-            "Khách hàng:": tk.StringVar(value=current_name),
-            "Địa chỉ:": tk.StringVar(value=current_address),
-            "Số điện thoại:": tk.StringVar(value=current_sdt),
-        } 
-        
-        for label_text, var in fields_to_edit.items():
-            row = tk.Frame(form_edit, bg="#f7f9fc")
-            row.pack(fill="x", pady=8)
-            label = tk.Label(row, text=label_text, width=12, anchor="w", bg="#f7f9fc", font=("Segoe UI", 10))
-            label.pack(side="left")
-            entry = tk.Entry(row, textvariable=var, font=("Segoe UI", 10))
-            entry.pack(side="left", expand=True, fill="x")
-        
-        def save_customer_change():
-            # selected_id = self.form_fields_y["ID:"].get()
-            ten_kh = fields_to_edit["Khách hàng:"].get().strip()
-            dia_chi = fields_to_edit["Địa chỉ:"].get().strip()
-            so_dien_thoai = fields_to_edit["Số điện thoại:"].get().strip()
+        # 4. Kiểm tra dữ liệu đầu vào (ví dụ: tên không được để trống)
+        if not ten_kh or not dia_chi:
+            messagebox.showerror("Lỗi", "Tên khách hàng và địa chỉ không được để trống.")
+            return
 
-            # Gọi phương thức add_item từ controller
+        # 5. Yêu cầu xác nhận từ người dùng
+        confirm = messagebox.askyesno(
+            "Xác nhận sửa", 
+            "Xác nhận thay đổi thông tin khách hàng?"
+        )
+        
+        if not confirm:
+            return # Nếu người dùng chọn "No", không làm gì cả
+
+        try:
+            # 6. Gọi phương thức update_customer từ controller để lưu vào database
             self.controller.update_customer(selected_id, ten_kh, dia_chi, so_dien_thoai)
-            edit_window.destroy()
+            
+            # 7. Cập nhật lại dòng tương ứng trong Treeview mà không cần tải lại toàn bộ danh sách
+            selection = self.tree_kh.selection()
+            if selection:            
+                selected_item = self.tree_kh.selection()[0]  # Lấy item đang được chọn
+                self.tree_kh.item(selected_item, values=(selected_id, ten_kh, dia_chi, so_dien_thoai))
+                # Cập nhật lại dữ liệu gốc sau khi đã lưu thành công
+                self.original_customer_data = (selected_id, ten_kh, dia_chi, so_dien_thoai)
+            
 
-            for item in self.tree_kh.get_children():
-                if self.tree_kh.item(item, "values")[0] == selected_id:
-                    self.tree_kh.selection_set(item)
-                    self.tree_kh.focus(item)
-                    self.tree_kh.see(item)
-                    self.on_item_select(None)  # Gọi lại hàm cập nhật chi tiết
-                    break
-
-        # Tạo nút lưu và nút hủy
-        button_frame_edit = tk.Frame(form_edit, bg="#f7f9fc")
-        button_frame_edit.pack(fill="x", pady=(20, 0))
-
-        edit_btn = ctk.CTkButton(button_frame_edit, text="Lưu", command=save_customer_change, fg_color="#f39c12", font=("Segoe UI", 10, "bold"), width=100)
-        edit_btn.pack(side="right", padx=5)
-
-        cancel_btn = ctk.CTkButton(button_frame_edit, text="Hủy", command=edit_window.destroy, fg_color="#e74c3c", font=("Segoe UI", 10, "bold"), width=100)
-        cancel_btn.pack(side="right")
+        except Exception as e:
+            # Bắt lỗi nếu có sự cố xảy ra và thông báo cho người dùng
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi cập nhật: {e}")
     
     def delete_customer(self):
         selected_id = self.form_fields_kh["ID:"].get()
         selected_tree_item = self.tree_kh.selection()
-        if not selected_id:
+        if not selected_id or selected_id != self.selected_customer_id:
             messagebox.showwarning("Cảnh báo", "Vui lòng chọn một khách hàng để xóa!")
             return
         
@@ -248,9 +269,11 @@ class KhachHangView(tk.Frame):
             self.controller.delete_customer(selected_id)
             # Xóa thông tin trong form
             self.tree_kh.delete(selected_tree_item)
-            self.clear_details_form()
+            self.clear_selection_and_form()
 
     def clear_details_form(self):
         """Xóa toàn bộ nội dung trong các ô Entry của form chi tiết."""
         for var in self.form_fields_kh.values():
             var.set("")
+        self.original_customer_data = None
+        self.selected_customer_id = None
