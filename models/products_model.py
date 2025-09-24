@@ -42,18 +42,18 @@ class ProductModel(BaseModel):
             return []
 
     # Thêm hàm: add(), update(), delete()...
-    def add_item(self, id_bai, ten, gia, donvi):
+    def add_item(self, id_bai, ten, prices_str, units_str):
         conn = sqlite3.connect("database/CSP_0708.db")
         cursor = conn.cursor()
         if id_bai is not None:
             cursor.execute(
                 "INSERT INTO products (ten_sp, don_vi_tinh, gia_ban, id_bai) VALUES (?, ?, ?, ?)",
-                (ten, donvi, gia, id_bai)
+                (ten, units_str, prices_str, id_bai)
             )
         else:
             cursor.execute(
                 "INSERT INTO products (ten_sp, don_vi_tinh, gia_ban) VALUES (?, ?, ?)",
-                (ten, donvi, gia)
+                (ten, units_str, prices_str)
             )
         conn.commit()
         conn.close()

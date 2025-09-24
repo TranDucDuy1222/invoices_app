@@ -26,18 +26,16 @@ class MatHangView(tk.Frame):
         style.configure("Treeview", rowheight=40, font=("Segoe UI", 10))
         style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
 
-        columns = ("id", "ten_mat_hang", "don_vi", "gia", "ten_bai")
+        columns = ("id", "ten_mat_hang", "don_vi_gia", "ten_bai")
         self.tree_mh = ttk.Treeview(left_frame, columns=columns, show="headings", selectmode="browse")
 
         self.tree_mh.heading("id", text="ID")
         self.tree_mh.heading("ten_mat_hang", text="Tên mặt hàng")
-        self.tree_mh.heading("don_vi", text="Đơn vị")
-        self.tree_mh.heading("gia", text="Giá")
+        self.tree_mh.heading("don_vi_gia", text="Đơn vị : Giá")
 
         self.tree_mh.column("id", width=50, anchor="center")
-        self.tree_mh.column("ten_mat_hang", width=250)
-        self.tree_mh.column("don_vi", width=100, anchor="center")
-        self.tree_mh.column("gia", width=120, anchor="e")
+        self.tree_mh.column("ten_mat_hang", width=200)
+        self.tree_mh.column("don_vi_gia", width=300)
         self.tree_mh.column("ten_bai", width=0, stretch=False)
 
 
@@ -123,79 +121,106 @@ class MatHangView(tk.Frame):
         
         # Cập nhật dữ liệu lên các ô Entry thông qua dictionary của class (self.form_fields_mh)
         # values[0] là ID, values[1] là tên, v.v.
-        self.form_fields_mh["ID:"].set(values[0])
-        self.form_fields_mh["Tên mặt hàng:"].set(values[1])
-        self.form_fields_mh["Đơn vị:"].set(values[2])
-        self.form_fields_mh["Giá:"].set(values[3])
-        self.form_fields_mh["Bãi:"].set(values[4] or '')
+        self.form_fields_mh["ID:"].set(values[0]) # id
+        self.form_fields_mh["Tên mặt hàng:"].set(values[1]) # ten_sp
+        self.form_fields_mh["Đơn vị:"].set(values[2].split('|')[0].split(':')[0].strip()) # Lấy đơn vị đầu tiên
+        self.form_fields_mh["Giá:"].set(values[2].split('|')[0].split(':')[1].strip()) # Lấy giá đầu tiên
+        self.form_fields_mh["Bãi:"].set(values[3] or '') # ten_bai
     
     # Thêm mặt hàng mới
     def add_item_window(self):
         # Tạo cửa sổ thêm mặt hàng
         add_window = tk.Toplevel(self.root_window)
         add_window.title("Thêm mặt hàng mới")
-        add_window.geometry("400x300")
-        add_window.resizable(False, False) # Không cho phép thay đổi kích thước
+        # Kích thước cửa sổ
+        window_width = 550
+        window_height = 450
+        # Lấy kích thước màn hình
+        screen_width = add_window.winfo_screenwidth()
+        screen_height = add_window.winfo_screenheight()
+        # Tính toán vị trí để căn giữa
+        x = (screen_width // 2) - (window_width // 2)
+        y = (screen_height // 2) - (window_height // 2)
+        # Gán geometry với cả kích thước và vị trí
+        add_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        add_window.resizable(False, False)  # Không cho phép thay đổi kích thước
         add_window.configure(bg="#f7f9fc")
-        add_window.transient(self.root_window)# Cửa sổ luôn ở trên cùng
+        add_window.transient(self.root_window)  # Cửa sổ luôn ở trên cùng
         add_window.grab_set()
 
         # Frame chứa form 
         form_add = tk.Frame(add_window, bg="#f7f9fc", padx=20, pady=20)
         form_add.pack(expand=True, fill="both")
 
-        add_fields = {
-        "Tên mặt hàng:": tk.StringVar(),
-        "Đơn vị:": tk.StringVar(),
-        "Giá:": tk.StringVar()
-        }
+        # --- Tên mặt hàng ---
+        ten_mh_row = tk.Frame(form_add, bg="#f7f9fc")
+        ten_mh_row.pack(fill="x", pady=8)
+        tk.Label(ten_mh_row, text="Tên mặt hàng:", width=12, anchor="w", bg="#f7f9fc", font=("Segoe UI", 10)).pack(side="left")
+        ten_mh_var = tk.StringVar()
+        tk.Entry(ten_mh_row, textvariable=ten_mh_var, font=("Segoe UI", 10)).pack(side="left", expand=True, fill="x")
 
-        for label_text, var in add_fields.items():
-            row = tk.Frame(form_add, bg="#f7f9fc")
-            row.pack(fill="x", pady=8)
-
-            label = tk.Label(row, text=label_text, width=12, anchor="w", bg="#f7f9fc", font=("Segoe UI", 10))
-            label.pack(side="left")
-
-            entry = tk.Entry(row, textvariable=var, font=("Segoe UI", 10))
-            entry.pack(side="left", expand=True, fill="x")
-
-        # Tạo trường chọn bãi
+        # --- Chọn bãi ---
         yard_names = [yard[1] for yard in self.display_yard_info]
-
-        # 2. Tạo các widget cho dòng chọn bãi
         yard_row = tk.Frame(form_add, bg="#f7f9fc")
         yard_row.pack(fill="x", pady=8)
-        
         yard_label = tk.Label(yard_row, text="Bãi:", width=12, anchor="w", bg="#f7f9fc", font=("Segoe UI", 10))
         yard_label.pack(side="left")
-
         yard_var = tk.StringVar()
-        # Thêm lựa chọn "Không có bãi" vào đầu danh sách
-        yard_options = ["Không có bãi"] + yard_names 
-        
-        yard_combo = ttk.Combobox(yard_row, 
-                                textvariable=yard_var, 
-                                values=yard_options, 
-                                state="readonly", # Ngăn người dùng nhập tự do
-                                font=("Segoe UI", 10))
+        yard_options = ["Không có bãi"] + yard_names
+        yard_combo = ttk.Combobox(yard_row, textvariable=yard_var, values=yard_options, state="readonly", font=("Segoe UI", 10))
         yard_combo.pack(side="left", expand=True, fill="x")
-        yard_combo.set("Không có bãi") # Đặt giá trị mặc định được hiển thị       
-            
+        yard_combo.set("Không có bãi")
+
+        # --- Frame cho các cặp Đơn vị - Giá ---
+        prices_frame = tk.Frame(form_add, bg="#f7f9fc")
+        prices_frame.pack(fill="x", pady=8)
+        price_entries = []
+
+        def add_price_row():
+            row = tk.Frame(prices_frame, bg="#f7f9fc")
+            row.pack(fill="x", pady=4)
+
+            tk.Label(
+                row, text="Đơn vị:", width=12, anchor="w",
+                bg="#f7f9fc", font=("Segoe UI", 10)
+            ).pack(side="left")
+
+            # Tăng width từ 10 → 20 để rộng hơn
+            don_vi_entry = tk.Entry(row, font=("Segoe UI", 10), width=20)
+            don_vi_entry.pack(side="left", padx=(0, 10))
+
+            tk.Label(
+                row, text="Giá:", anchor="w",
+                bg="#f7f9fc", font=("Segoe UI", 10)
+            ).pack(side="left")
+
+            gia_entry = tk.Entry(row, font=("Segoe UI", 10))
+            gia_entry.pack(side="left", expand=True, fill="x")
+
+            price_entries.append({'don_vi': don_vi_entry, 'gia': gia_entry, 'frame': row})
+
+        # Thêm dòng đầu tiên
+        add_price_row()
+
+        # Nút thêm dòng giá
+        add_row_btn = ctk.CTkButton(
+            form_add,
+            text="+ Thêm đơn vị/giá",
+            command=add_price_row,
+            fg_color="#3498db",
+            font=("Segoe UI", 10),
+            height=30,
+            width=180
+        )
+        add_row_btn.pack(pady=10)
+
         # Hàm lưu mặt hàng mới
         def save_new_item():
-            ten = add_fields["Tên mặt hàng:"].get().strip()
-            donvi = add_fields["Đơn vị:"].get().strip()
-            gia = add_fields["Giá:"].get().replace(".", "").replace(",", "").strip()
+            ten = ten_mh_var.get().strip()
             bai = yard_var.get()
 
-            if not ten or not donvi or not gia:
-                messagebox.showwarning("Thiếu thông tin", "Vui lòng nhập đầy đủ thông tin!")
-                return
-            try:
-                gia_int = int(gia)
-            except ValueError:
-                messagebox.showerror("Lỗi", "Giá phải là số nguyên!")
+            if not ten:
+                messagebox.showwarning("Thiếu thông tin", "Vui lòng nhập tên mặt hàng!")
                 return
 
             # Lấy id_bai nếu có chọn bãi
@@ -206,8 +231,31 @@ class MatHangView(tk.Frame):
                         id_bai = yard[0]
                         break
 
-            # Gọi phương thức add_item từ controller
-            self.controller.add_item(id_bai, ten, gia_int, donvi)
+            units_list = []
+            prices_list = []
+            for entry_pair in price_entries:
+                donvi = entry_pair['don_vi'].get().strip()
+                gia_str = entry_pair['gia'].get().replace(".", "").replace(",", "").strip()
+
+                if donvi and gia_str:
+                    try:
+                        # Thêm vào danh sách
+                        units_list.append(donvi)
+                        prices_list.append(int(gia_str))
+                    except ValueError:
+                        messagebox.showerror("Lỗi", f"Giá '{gia_str}' không phải là số hợp lệ. Vui lòng kiểm tra lại.")
+                        return # Dừng lại nếu có lỗi
+                elif donvi or gia_str: # Nếu chỉ điền 1 trong 2
+                    messagebox.showwarning("Thiếu thông tin", "Vui lòng nhập đủ cả Đơn vị và Giá cho mỗi dòng.")
+                    return
+
+            if not units_list:
+                messagebox.showwarning("Thiếu thông tin", "Vui lòng nhập ít nhất một cặp Đơn vị và Giá.")
+                return
+
+            # Gọi controller một lần duy nhất với danh sách đơn vị và giá
+            self.controller.add_item(id_bai, ten, units_list, prices_list)
+
             close_add_window()
         
         def close_add_window():
@@ -215,7 +263,7 @@ class MatHangView(tk.Frame):
 
         # Nút lưu và hủy
         button_frame_add = tk.Frame(form_add, bg="#f7f9fc")
-        button_frame_add.pack(fill="x", pady=(20, 0))
+        button_frame_add.pack(fill="x", pady=(10, 0), side="bottom")
 
         add_btn = ctk.CTkButton(button_frame_add, text="Lưu", command=save_new_item, fg_color="#2ecc71", font=("Segoe UI", 10, "bold"), width=100)
         add_btn.pack(side="right", padx=5)
@@ -264,7 +312,7 @@ class MatHangView(tk.Frame):
         field_to_edit = {
             "Tên mặt hàng:": tk.StringVar(value=self.form_fields_mh["Tên mặt hàng:"].get()),
             "Đơn vị:": tk.StringVar(value=self.form_fields_mh["Đơn vị:"].get()),
-            "Giá:": tk.StringVar(value=self.form_fields_mh["Giá:"].get().replace(".", "").replace(",", "")) # Loại bỏ dấu chấm
+            "Giá:": tk.StringVar(value=self.form_fields_mh["Giá:"].get()) # Giữ nguyên định dạng để hiển thị
         }
 
         for label_text, var in field_to_edit.items():

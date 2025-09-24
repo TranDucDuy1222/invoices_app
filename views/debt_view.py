@@ -35,6 +35,9 @@ class CongNoView(tk.Frame):
         left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
         left_frame.grid_rowconfigure(2, weight=1)
         left_frame.grid_columnconfigure(0, weight=1)
+        
+        # -- Label danh sách --
+        tk.Label(left_frame, text="Danh sách công nợ", font=("Segoe UI", 14, "bold"), bg="white").grid(row=1, column=0, sticky="w", pady=(5, 5))
 
         # -- Thanh tìm kiếm --
         search_frame = ctk.CTkFrame(left_frame, fg_color="white")
@@ -61,8 +64,6 @@ class CongNoView(tk.Frame):
         # Bind sự kiện KeyRelease thay vì dùng trace
         search_entry.bind("<KeyRelease>", self.filter_data)
 
-        # -- Label danh sách --
-        tk.Label(left_frame, text="Danh sách công nợ", font=("Segoe UI", 14, "bold"), bg="white").grid(row=1, column=0, sticky="w", pady=(5, 5))
 
         # -- Bảng danh sách công nợ --
         tree_container = tk.Frame(left_frame)
@@ -310,7 +311,7 @@ class CongNoView(tk.Frame):
                 pass
 
         # Gọi controller để xử lý việc cập nhật
-        self.debt_controller.update_debt(debt_id, new_payment_amount, payment_date=date_to_pass)
+        self.debt_controller.update_debt_from_view(debt_id, new_payment_amount, payment_date=date_to_pass)
 
     # Phương thức chuyển sang khách hàng tiếp theo
     def next_customer(self):

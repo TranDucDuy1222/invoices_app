@@ -29,6 +29,12 @@ class DebtModel(BaseModel):
         self.cursor.execute(query, (debt_id,))
         return self.cursor.fetchone()
 
+    def get_by_customer_id(self, customer_id):
+        """ Lấy bản ghi công nợ gần nhất bằng id_kh. """
+        query = "SELECT * FROM debts WHERE id_kh = ? ORDER BY ngay_cap_nhat DESC LIMIT 1"
+        self.cursor.execute(query, (customer_id,))
+        return self.cursor.fetchone()
+
     def update(self, debt_id, new_cong_no_cu, payment_amount, new_cong_no_ht, update_date):
         """
         Cập nhật thông tin công nợ cho một bản ghi.
