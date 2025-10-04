@@ -7,19 +7,17 @@ from PIL import Image, ImageTk
 from controllers.products_controller import ProductController
 from controllers.yard_controller import YardController
 from controllers.customer_controller import CustomerController
-
-# Import Model
-from models.base_model import BaseModel
-from models.products_model import ProductModel
-from models.yard_model import YardModel
+from controllers.debt_controller import DebtController
+from controllers.invoice_controller import InvoiceController
+from controllers.invoiceHistorys_controller import InvoiceHistoryController
 
 # Import class view từ file đã tách
 from views.products_view import MatHangView
 from views.khach_hang import KhachHangView
-from views.hoa_don import TaoHoaDonView
-from views.lich_su_hoa_don import LsHoaDonView
+from views.invoice_view import TaoHoaDonView
+from views.invoiceHistorys_view import LsHoaDonView
 from views.bai import YardVehicleManagementView
-from views.cong_no import CongNoView
+from views.debt_view import CongNoView
 
 class App(tk.Tk):
     def __init__(self):
@@ -144,16 +142,18 @@ class App(tk.Tk):
 
         khach_hang_page = KhachHangView(self.main_content_frame, self)
         khach_hang_page.grid(row=0, column=0, sticky='nsew')
-        self.yard_controller = CustomerController(view=khach_hang_page, db_path=self.db_path)
+        self.customer_controller = CustomerController(view=khach_hang_page, db_path=self.db_path)
         self.frames["Khách hàng"] = khach_hang_page
  
         tao_hoa_don_page = TaoHoaDonView(self.main_content_frame, self)
         tao_hoa_don_page.grid(row=0, column=0, sticky='nsew')
         self.frames["Tạo hóa đơn"] = tao_hoa_don_page
+        self.invoice_controller = InvoiceController(view=tao_hoa_don_page, db_path=self.db_path)
         
         ls_hoa_don_page = LsHoaDonView(self.main_content_frame, self)
         ls_hoa_don_page.grid(row=0, column=0, sticky='nsew')
         self.frames["Lịch sử hóa đơn"] = ls_hoa_don_page
+        self.invoice_history_controller = InvoiceHistoryController(view=ls_hoa_don_page, db_path=self.db_path)
 
         # Trang "Bãi"
         yard_page = YardVehicleManagementView(self.main_content_frame, self)
@@ -165,11 +165,27 @@ class App(tk.Tk):
         cong_no_page = CongNoView(self.main_content_frame, self)
         cong_no_page.grid(row=0, column=0, sticky="nsew")
         self.frames["Công nợ"] = cong_no_page
+        self.debt_controller = DebtController(view=cong_no_page, db_path=self.db_path)
 
     def show_tab(self, tab_name):
         frame_to_show = self.frames[tab_name]
         frame_to_show.tkraise()
 
+    def refresh_product_page_data(self):
+        """Yêu cầu ProductController tải lại dữ liệu (sản phẩm và bãi)."""
+        if hasattr(self, 'products_controller'):
+            self.products_controller.refresh_data()
+
+    def refresh_debt_data(self):
+        """Yêu cầu DebtController tải lại dữ liệu công nợ."""
+        if self.debt_controller:
+            self.debt_controller.load_debts()
+
+    def refresh_invoice_history(self):
+        """Yêu cầu LsHoaDonView tải lại dữ liệu lịch sử hóa đơn."""
+        history_view = self.frames.get("Lịch sử hóa đơn")
+        if history_view:
+            history_view.refresh_data()
         # --- Chạy ứng dụng ---
 if __name__ == "__main__":
     app = App()

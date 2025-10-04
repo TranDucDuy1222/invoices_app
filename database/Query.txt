@@ -4,37 +4,51 @@ Lệnh truy vấn các cột thuộc bảng
 + id_sp
 + id_bai
 + ten_sp
-+ gia_ban
-+ don_vi_tinh
++ gia_ban (Text)
++ don_vi_tinh (Text)
 
 - yards
 + id_bai
 + ten_bai
 + dia_chi
 
+- cars
++ bien_so
+
 - invoices
 + id_hd
 + id_kh
-+ ngay_tao_hd
++ ngay_tao_hd (lấy ngày hiện tại)
++ ngay_mua (ngày mua chọn trong frame trái)
 + tong_tien
 + trang_thai
 
-- invoices_details
+- invoices_details(của từng sản phẩm)
 + id_cthd
 + id_hd
++ id_xe
++ id_bai (nếu sản phẩm không thuộc bãi nào thì lưu là 0)
 + id_sp
++ don_vi_tinh
++ don_gia
 + so_luong
 + phi_van_chuyen
++ thanh_tien 
++ noi_giao (Tên địa chỉ giao hàng và địa chỉ chi tiết)
+
 
 - debts
 +  id_cn
 + id_kh
-+ cong_no
++ cong_no_cu (Công nợ trước đó)
++ cong_no_dtt (Công nợ đã thanh toán)
++ tong_cong_no (Công nợ hiện tại là công nợ còn lại)
++ ngay_cap_nhat
 
 - customers
 + id_kh
 + ten
-+ Suc0u273 t
++ sdt
 
 - admin_invoices
 + id_hdqt
@@ -45,3 +59,9 @@ Lệnh truy vấn các cột thuộc bảng
 + id_dc
 + id_kh
 + dia_chi
+
+
+* Mã màu
+- Xanh lá : #2ecc71
+- Vàng : #f39c12
+- Đỏ : #e74c3c

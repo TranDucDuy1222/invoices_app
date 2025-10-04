@@ -1,5 +1,4 @@
 from models.products_model import ProductModel
-import sqlite3
 from views.config import db_path
 from tkinter import messagebox
 
@@ -30,11 +29,23 @@ class ProductController:
             else:
                 # Nếu không, chỉ dùng tên sản phẩm
                 formatted_name = ten_sp
-            
-            # Định dạng giá bán với dấu phẩy
-            formatted_price = f"{gia_ban:,}".replace(",", ".")
-            # Tạo tuple mới với tên đã được định dạng
-            display_row = (id_sp, ten_sp, don_vi, formatted_price, ten_bai)
+
+            # Xử lý và định dạng các cặp Đơn vị - Giá
+            try:
+                units = str(don_vi).split('|')
+                prices = str(gia_ban).split('|')
+                
+                # Ghép cặp đơn vị và giá, sau đó định dạng
+                formatted_pairs = []
+                for unit, price in zip(units, prices):
+                    formatted_price = f"{int(price):,}".replace(",", ".")
+                    formatted_pairs.append(f"{unit} : {formatted_price}")
+                
+                unit_price_display = " | ".join(formatted_pairs)
+            except (ValueError, TypeError, IndexError):
+                unit_price_display = "Lỗi định dạng"
+
+            display_row = (id_sp, ten_sp, unit_price_display, ten_bai)
             display_data.append(display_row)
 
         # 3. Gọi phương thức của View để cập nhật Treeview với dữ liệu đã xử lý
@@ -47,18 +58,23 @@ class ProductController:
         self.yard_name_to_id_map = {yard[1]: yard[0] for yard in self.yards_data}
         self.view.set_yard_list(self.yards_data)
 
-    def add_item(self, id_bai, ten, gia, donvi):
+    def add_item(self, id_bai, ten, units, prices):
         try:
-            self.model.add_item(id_bai, ten, gia, donvi)
-            messagebox.showinfo("Thành công", "Đã thêm mặt hàng mới!")
+            # Chuyển đổi danh sách đơn vị và giá thành chuỗi để lưu vào DB
+            units_str = "|".join(units)
+            prices_str = "|".join(map(str, prices))
+
+            self.model.add_item(id_bai, ten, prices_str, units_str)
+            messagebox.showinfo("Thành công", f"Đã thêm mặt hàng '{ten}'!")
             # Sau khi thêm, load lại danh sách mặt hàng
             self.load_products()
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể thêm mặt hàng: {e}")
 
-    def update_item(self, selected_id, id_bai, ten, gia_int, donvi):
+    def update_item(self, item_id, id_bai, ten, units_str, prices_str):
         try:
-            self.model.update_item(selected_id, id_bai, ten, gia_int, donvi)
+            # Gọi phương thức update_item của model với các chuỗi đã được nối
+            self.model.update_item(item_id, id_bai, ten, prices_str, units_str)
             messagebox.showinfo("Thành công", "Đã cập nhật thông tin mặt hàng!")
             self.load_products()  # Tải lại danh sách sau khi cập nhật
         except Exception as e:
@@ -73,3 +89,8 @@ class ProductController:
     
     def __del__(self):
         self.model.close()
+
+    def refresh_data(self):
+        """Tải lại dữ liệu cần thiết cho view (sản phẩm và bãi)."""
+        self.load_products()
+        self.load_yards()
