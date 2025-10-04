@@ -181,6 +181,11 @@ class App(tk.Tk):
         frame_to_show = self.frames[tab_name]
         frame_to_show.tkraise()
 
+    def refresh_product_page_data(self):
+        """Yêu cầu ProductController tải lại dữ liệu (sản phẩm và bãi)."""
+        if hasattr(self, 'products_controller'):
+            self.products_controller.refresh_data()
+
     def refresh_debt_data(self):
         """Yêu cầu DebtController tải lại dữ liệu công nợ."""
         if self.debt_controller:
