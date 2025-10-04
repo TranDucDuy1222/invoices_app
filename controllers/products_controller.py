@@ -25,7 +25,7 @@ class ProductController:
             # Kiểm tra xem sản phẩm có tên bãi không
             if ten_bai:
                 # Nếu có, tạo chuỗi đa dòng
-                formatted_name = f"{ten_sp}\n(Bãi: {ten_bai})"
+                formatted_name = f"{ten_sp} (Bãi: {ten_bai})"
             else:
                 # Nếu không, chỉ dùng tên sản phẩm
                 formatted_name = ten_sp
@@ -45,7 +45,7 @@ class ProductController:
             except (ValueError, TypeError, IndexError):
                 unit_price_display = "Lỗi định dạng"
 
-            display_row = (id_sp, ten_sp, unit_price_display, ten_bai)
+            display_row = (id_sp, formatted_name, unit_price_display, ten_bai)
             display_data.append(display_row)
 
         # 3. Gọi phương thức của View để cập nhật Treeview với dữ liệu đã xử lý

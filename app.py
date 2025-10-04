@@ -10,6 +10,8 @@ from controllers.customer_controller import CustomerController
 from controllers.debt_controller import DebtController
 from controllers.invoice_controller import InvoiceController
 from controllers.invoiceHistorys_controller import InvoiceHistoryController
+from controllers.setting_controller import SettingController
+
 
 # Import class view từ file đã tách
 from views.products_view import MatHangView
@@ -18,6 +20,8 @@ from views.invoice_view import TaoHoaDonView
 from views.invoiceHistorys_view import LsHoaDonView
 from views.bai import YardVehicleManagementView
 from views.debt_view import CongNoView
+from views.setting_view import CaiDatView
+
 
 class App(tk.Tk):
     def __init__(self):
@@ -118,13 +122,13 @@ class App(tk.Tk):
                 bg="#34495e",
                 relief="flat",
                 activebackground="#4a627a",
-                # command=self.open_settings # (Hàm mở cửa sổ cài đặt)
+                command=lambda: self.show_tab("Cài đặt")
             )
             settings_btn.pack()
         except FileNotFoundError:
             print("Lỗi: không tìm thấy file icon 'icons/setting.png'")
             # Tạo nút text nếu không có icon
-            settings_btn = tk.Button(settings_frame, text="Cài đặt")
+            settings_btn = tk.Button(settings_frame, text="Cài đặt", command=lambda: self.show_tab("Cài đặt"))
             settings_btn.pack()
 
     def _create_content_area(self):
@@ -166,6 +170,12 @@ class App(tk.Tk):
         cong_no_page.grid(row=0, column=0, sticky="nsew")
         self.frames["Công nợ"] = cong_no_page
         self.debt_controller = DebtController(view=cong_no_page, db_path=self.db_path)
+
+        # Trang " Cài đặt "
+        cai_dat_page = CaiDatView(self.main_content_frame, self)
+        cai_dat_page.grid(row=0, column=0, sticky="nsew")   
+        self.frames["Cài đặt"] = cai_dat_page
+        self.setting_controller = SettingController(view=cai_dat_page, db_path=self.db_path)
 
     def show_tab(self, tab_name):
         frame_to_show = self.frames[tab_name]
