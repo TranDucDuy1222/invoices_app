@@ -42,11 +42,21 @@ class KhachHangView(tk.Frame):
         self.tree_kh.bind("<<TreeviewSelect>>", self.on_customer_select)
 
         #------ Form thông tin chi tiết ------
-        right_frame = tk.Frame(self, bg="#f7f9fc", width=350)
+        right_frame = tk.Frame(self, bg="#f7f9fc", width=450)
         right_frame.pack(side="right", fill="y", padx=(10, 0))
         right_frame.pack_propagate(False)
 
-        tk.Label(right_frame, text="Thông tin khách hàng", font=("Segoe UI", 16, "bold"), bg="#f7f9fc").pack(pady=20, anchor="w", padx=20)
+        # --- Frame chứa nút Thêm chính, luôn hiển thị ---
+        add_button_container = tk.Frame(right_frame, bg="#f7f9fc")
+        add_button_container.pack(pady=20, padx=20, fill="x")
+        self.add_btn = ctk.CTkButton(add_button_container, text="Thêm khách hàng mới", command=self.add_customer_window, corner_radius=10, fg_color="#27ae60", font=("Segoe UI", 15, "bold"), height=30)
+        self.add_btn.pack(expand=True, fill="x")
+
+        # --- Frame chứa toàn bộ form chi tiết, có thể ẩn/hiện ---
+        self.details_container_kh = tk.Frame(right_frame, bg="#f7f9fc")
+        self.details_container_kh.pack(fill="both", expand=True, padx=20)
+
+        tk.Label(self.details_container_kh, text="Thông tin khách hàng", font=("Segoe UI", 16, "bold"), bg="#f7f9fc").pack(pady=(0, 20), anchor="w")
 
         # Lưu các biến thành thuộc tính của self
         self.form_fields_kh = {
@@ -57,8 +67,8 @@ class KhachHangView(tk.Frame):
         }
         # self.loai_kh_var = tk.StringVar(value="Khách lẻ") # Đặt giá trị mặc định
 
-        form_frame = tk.Frame(right_frame, bg="#f7f9fc")
-        form_frame.pack(fill="x", padx=20)
+        form_frame = tk.Frame(self.details_container_kh, bg="#f7f9fc")
+        form_frame.pack(fill="x")
 
         for label_text, var in self.form_fields_kh.items():
             row = tk.Frame(form_frame, bg="#f7f9fc")
@@ -86,12 +96,11 @@ class KhachHangView(tk.Frame):
         # tk.Radiobutton(radio_container, text="Khách lẻ", variable=self.loai_kh_var, value="Khách lẻ", bg="#f7f9fc", font=("Segoe UI", 10), activebackground="#f7f9fc").pack(side="left", padx=5)
 
         #------ Frame chứa các nút bấm ------
-        button_frame = tk.Frame(right_frame, bg="#f7f9fc")
-        button_frame.pack(pady=30, padx=20, fill="x")
+        button_frame = tk.Frame(self.details_container_kh, bg="#f7f9fc")
+        button_frame.pack(pady=20, fill="x")
 
         self.button_frame = button_frame
 
-        self.add_btn = ctk.CTkButton(self.button_frame, text="Thêm", command=self.add_customer_window, corner_radius=10, fg_color="#27ae60", font=("Segoe UI", 15), width=100)
         self.update_btn = ctk.CTkButton(self.button_frame, text="Sửa", command=self.update_customer, corner_radius=10, fg_color="#f39c12", font=("Segoe UI", 15), width=100)
         self.cancel_btn = ctk.CTkButton(self.button_frame, text="Hủy", command=self.clear_selection_and_form, corner_radius=10, fg_color="#7f8c8d", font=("Segoe UI", 15), width=100)
         self.delete_btn = ctk.CTkButton(self.button_frame, text="Xóa", command=self.delete_customer, corner_radius=10, fg_color="#e74c3c", font=("Segoe UI", 15), width=100)
@@ -99,15 +108,14 @@ class KhachHangView(tk.Frame):
         self._show_initial_buttons()
 
     def _show_initial_buttons(self):
-        """Chỉ hiển thị nút Thêm."""
-        self.update_btn.pack_forget()
-        self.cancel_btn.pack_forget()
-        self.delete_btn.pack_forget()
-        self.add_btn.pack(side="left", expand=True, fill="x")
+        """Ẩn form chi tiết và chỉ hiển thị nút Thêm chính."""
+        self.details_container_kh.pack_forget()
+        self.add_btn.pack(expand=True, fill="x")
 
     def _show_edit_buttons(self):
-        """Hiển thị các nút Sửa, Hủy, Xóa."""
+        """Hiển thị form chi tiết và các nút Sửa, Hủy, Xóa."""
         self.add_btn.pack_forget()
+        self.details_container_kh.pack(fill="both", expand=True, padx=20)
         self.update_btn.pack(side="left", expand=True, pady=5)
         self.cancel_btn.pack(side="left", expand=True, pady=5, padx=10)
         self.delete_btn.pack(side="left", expand=True, pady=5)
@@ -154,7 +162,17 @@ class KhachHangView(tk.Frame):
         # Tạo cửa sổ thêm mặt hàng
         add_window = tk.Toplevel(self.root_window)
         add_window.title("Thêm khách hàng mới")
-        add_window.geometry("400x250")
+        
+        window_width = 400
+        window_height = 200
+
+        screen_width = self.root_window.winfo_screenwidth()
+        screen_height = self.root_window.winfo_screenheight()
+
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+
+        add_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
         add_window.resizable(False, False) # Không cho phép thay đổi kích thước
         add_window.configure(bg="#f7f9fc")
         add_window.transient(self.root_window)# Cửa sổ luôn ở trên cùng

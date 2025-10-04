@@ -11,8 +11,11 @@ class YardVehicleManagementView(tk.Frame):
         
         self.root_window = root_window
         self.current_view = "yards" # Theo dõi giao diện hiện tại: "yards" hoặc "vehicles"
-        self.selected_customer_id = None # Giữ lại biến này từ code cũ của bạn
+        self.selected_yard_id = None # Giữ lại biến này từ code cũ của bạn
         self.original_yard_data = None # Biến lưu dữ liệu gốc của bãi
+
+        self.selected_vehicle_id = None
+        self.original_vehicle_data = None
         
         self.create_widgets()
         # self.set_yard_list(self.controller.get_all_yards()) # Ví dụ cách tải dữ liệu ban đầu
@@ -105,15 +108,25 @@ class YardVehicleManagementView(tk.Frame):
         self.tree_y.pack(expand=True, fill="both")
         self.tree_y.bind("<<TreeviewSelect>>", self.on_item_select)
 
-        right_frame = tk.Frame(parent, bg="#f7f9fc", width=350)
-        right_frame.pack(side="right", fill="both", padx=(0, 10), pady=10)
-        right_frame.pack_propagate(False)
+        self.right_frame_y = tk.Frame(parent, bg="#f7f9fc", width=450)
+        self.right_frame_y.pack(side="right", fill="both", padx=(0, 10), pady=10)
+        self.right_frame_y.pack_propagate(False)
 
-        tk.Label(right_frame, text="Thông tin chi tiết", font=("Segoe UI", 16, "bold"), bg="#f7f9fc").pack(pady=20, anchor="w", padx=20)
+        # --- Frame chứa nút Thêm chính, luôn hiển thị ---
+        add_button_container_y = tk.Frame(self.right_frame_y, bg="#f7f9fc")
+        add_button_container_y.pack(pady=20, padx=20, fill="x")
+        self.add_btn_y = ctk.CTkButton(add_button_container_y, text="Thêm bãi mới", command=self.add_yard_window, corner_radius=10, fg_color="#27ae60", font=("Segoe UI", 15, "bold"), height=30)
+        self.add_btn_y.pack(expand=True, fill="x")
+
+        # --- Frame chứa toàn bộ form chi tiết, có thể ẩn/hiện ---
+        self.yard_details_container = tk.Frame(self.right_frame_y, bg="#f7f9fc")
+        self.yard_details_container.pack(fill="both", expand=True, padx=20)
+
+        tk.Label(self.yard_details_container, text="Thông tin chi tiết bãi", font=("Segoe UI", 16, "bold"), bg="#f7f9fc").pack(pady=(0, 20), anchor="w")
 
         self.form_fields_y = {"ID:": tk.StringVar(), "Tên bãi:": tk.StringVar(), "Địa chỉ:": tk.StringVar()}
-        form_frame_y = tk.Frame(right_frame, bg="#f7f9fc")
-        form_frame_y.pack(fill="x", padx=20)
+        form_frame_y = tk.Frame(self.yard_details_container, bg="#f7f9fc")
+        form_frame_y.pack(fill="x")
         for label_text, var in self.form_fields_y.items():
             row = tk.Frame(form_frame_y, bg="#f7f9fc"); row.pack(fill="x", pady=5)
             label = tk.Label(row, text=label_text, width=12, anchor="w", bg="#f7f9fc", font=("Segoe UI", 10)); label.pack(side="left")
@@ -121,15 +134,14 @@ class YardVehicleManagementView(tk.Frame):
             if label_text == "ID:": entry.config(state="readonly", relief="flat", bg="#e9ecef")
             entry.pack(side="left", expand=True, fill="x")
 
-        button_frame = tk.Frame(right_frame, bg="#f7f9fc")
-        button_frame.pack(pady=30, padx=20, fill="x")
+        button_frame_y = tk.Frame(self.yard_details_container, bg="#f7f9fc")
+        button_frame_y.pack(pady=20, fill="x")
 
-        self.button_frame = button_frame
+        self.button_frame_y = button_frame_y
 
-        self.add_btn = ctk.CTkButton(self.button_frame, text="Thêm", command=self.add_yard_window, corner_radius=10, fg_color="#27ae60", font=("Segoe UI", 15), width=100)
-        self.update_btn = ctk.CTkButton(self.button_frame, text="Sửa", command=self.update_yard, corner_radius=10, fg_color="#f39c12", font=("Segoe UI", 15), width=100)
-        self.cancel_btn = ctk.CTkButton(self.button_frame, text="Hủy", command=self.clear_selection_and_form, corner_radius=10, fg_color="#7f8c8d", font=("Segoe UI", 15), width=100)
-        self.delete_btn = ctk.CTkButton(self.button_frame, text="Xóa", command=self.delete_yard, corner_radius=10, fg_color="#e74c3c", font=("Segoe UI", 15), width=100)
+        self.update_btn_y = ctk.CTkButton(self.button_frame_y, text="Sửa", command=self.update_yard, corner_radius=10, fg_color="#f39c12", font=("Segoe UI", 15), width=100)
+        self.cancel_btn_y = ctk.CTkButton(self.button_frame_y, text="Hủy", command=self.clear_selection_and_form, corner_radius=10, fg_color="#7f8c8d", font=("Segoe UI", 15), width=100)
+        self.delete_btn_y = ctk.CTkButton(self.button_frame_y, text="Xóa", command=self.delete_yard, corner_radius=10, fg_color="#e74c3c", font=("Segoe UI", 15), width=100)
 
     # Các hàm chức năng cho Bãi (giữ nguyên từ code cũ của bạn)
     def set_yard_list(self, data):
@@ -141,18 +153,30 @@ class YardVehicleManagementView(tk.Frame):
         selected_items = self.tree_y.selection()
         if not selected_items: return
         values = self.tree_y.item(selected_items[0], "values")
+
         self.original_yard_data = values # Lưu dữ liệu gốc khi chọn
+        
         self.form_fields_y["ID:"].set(values[0])
         self.form_fields_y["Tên bãi:"].set(values[1])
         self.form_fields_y["Địa chỉ:"].set(values[2])
-        self.selected_customer_id = values[0]
+        self.selected_yard_id = values[0]
         self._show_edit_buttons()
     
     def add_yard_window(self):
         # Tạo cửa sổ thêm mặt hàng
         add_window = tk.Toplevel(self.root_window)
         add_window.title("Thêm bãi mới")
-        add_window.geometry("400x200")
+        
+        window_width = 400
+        window_height = 200
+
+        screen_width = self.root_window.winfo_screenwidth()
+        screen_height = self.root_window.winfo_screenheight()
+
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+
+        add_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
         add_window.resizable(False, False) # Không cho phép thay đổi kích thước
         add_window.configure(bg="#f7f9fc")
         add_window.transient(self.root_window)# Cửa sổ luôn ở trên cùng
@@ -268,17 +292,17 @@ class YardVehicleManagementView(tk.Frame):
         for var in self.form_fields_y.values():
             var.set("")
         self.original_yard_data = None
-        self.selected_customer_id = None
+        self.selected_yard_id = None
 
 # ==============================================================================
-# 3. HÀM DÀNH CHO GIAO DIỆN "DANH SÁCH XE" (PLACEHOLDER)
+# 3. HÀM DÀNH CHO GIAO DIỆN "DANH SÁCH XE"
 # ==============================================================================
     
     def create_vehicle_view(self, parent):
         left_frame = tk.Frame(parent, bg="white")
         left_frame.pack(side="left", fill="both", expand=True, padx=(10, 10), pady=10)
 
-        tk.Label(left_frame, text="Danh sách bãi", font=("Segoe UI", 16, "bold"), bg="white").pack(pady=(0, 10), anchor="w")
+        tk.Label(left_frame, text="Danh sách xe", font=("Segoe UI", 16, "bold"), bg="white").pack(pady=(0, 10), anchor="w")
         style = ttk.Style()
         style.configure("Treeview", rowheight=40, font=("Segoe UI", 10))
         style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
@@ -287,6 +311,7 @@ class YardVehicleManagementView(tk.Frame):
         self.tree_x = ttk.Treeview(left_frame, columns=columns, show="headings", selectmode="browse")
         self.tree_x.heading("id", text="ID")
         self.tree_x.heading("bien_so_xe", text="Biển số xe")
+
         self.tree_x.column("id", width=10, anchor="center")
         self.tree_x.column("bien_so_xe", width=10)
         
@@ -294,17 +319,30 @@ class YardVehicleManagementView(tk.Frame):
         self.tree_x.configure(yscrollcommand=scrollbar_x.set)
         scrollbar_x.pack(side="right", fill="y")
         self.tree_x.pack(expand=True, fill="both")
-        self.tree_x.bind("<<TreeviewSelect>>")
+        self.tree_x.bind("<<TreeviewSelect>>", self.on_vehicle_select)
 
-        right_frame = tk.Frame(parent, bg="#f7f9fc", width=350)
-        right_frame.pack(side="right", fill="both", padx=(0, 10), pady=10)
-        right_frame.pack_propagate(False)
+        self.right_frame_x = tk.Frame(parent, bg="#f7f9fc", width=450)
+        self.right_frame_x.pack(side="right", fill="both", padx=(0, 10), pady=10)
+        self.right_frame_x.pack_propagate(False)
 
-        tk.Label(right_frame, text="Thông tin chi tiết", font=("Segoe UI", 16, "bold"), bg="#f7f9fc").pack(pady=20, anchor="w", padx=20)
+        # --- Frame chứa nút Thêm chính, luôn hiển thị ---
+        add_button_container_x = tk.Frame(self.right_frame_x, bg="#f7f9fc")
+        add_button_container_x.pack(pady=20, padx=20, fill="x")
+        self.add_btn_x = ctk.CTkButton(add_button_container_x, text="Thêm xe mới", command=self.add_vehicle_window, corner_radius=10, fg_color="#27ae60", font=("Segoe UI", 15, "bold"), height=30)
+        self.add_btn_x.pack(expand=True, fill="x")
 
-        self.form_fields_x = {"ID:": tk.StringVar(), "Biển số xe:": tk.StringVar()}
-        form_frame_x = tk.Frame(right_frame, bg="#f7f9fc")
-        form_frame_x.pack(fill="x", padx=20)
+        # --- Frame chứa toàn bộ form chi tiết, có thể ẩn/hiện ---
+        self.vehicle_details_container = tk.Frame(self.right_frame_x, bg="#f7f9fc")
+        self.vehicle_details_container.pack(fill="both", expand=True, padx=20)
+
+        tk.Label(self.vehicle_details_container, text="Thông tin chi tiết xe", font=("Segoe UI", 16, "bold"), bg="#f7f9fc").pack(pady=(0, 20), anchor="w")
+
+        self.form_fields_x = {
+            "ID:": tk.StringVar(), 
+            "Biển số xe:": tk.StringVar()
+            }
+        form_frame_x = tk.Frame(self.vehicle_details_container, bg="#f7f9fc")
+        form_frame_x.pack(fill="x")
         for label_text, var in self.form_fields_x.items():
             row = tk.Frame(form_frame_x, bg="#f7f9fc"); row.pack(fill="x", pady=5)
             label = tk.Label(row, text=label_text, width=12, anchor="w", bg="#f7f9fc", font=("Segoe UI", 10))
@@ -313,57 +351,195 @@ class YardVehicleManagementView(tk.Frame):
             if label_text == "ID:": entry.config(state="readonly", relief="flat", bg="#e9ecef")
             entry.pack(side="left", expand=True, fill="x")
 
-        button_frame_x = tk.Frame(right_frame, bg="#f7f9fc")
-        button_frame_x.pack(pady=30, padx=20, fill="x")
+        button_frame_x = tk.Frame(self.vehicle_details_container, bg="#f7f9fc")
+        button_frame_x.pack(pady=20, fill="x")
 
         self.button_frame_x = button_frame_x
 
-        self.add_btn_x = ctk.CTkButton(self.button_frame_x, text="Thêm", corner_radius=10, fg_color="#27ae60", font=("Segoe UI", 15), width=100)
-        self.update_btn_x = ctk.CTkButton(self.button_frame_x, text="Sửa", corner_radius=10, fg_color="#f39c12", font=("Segoe UI", 15), width=100)
-        self.cancel_btn_x = ctk.CTkButton(self.button_frame_x, text="Hủy", corner_radius=10, fg_color="#7f8c8d", font=("Segoe UI", 15), width=100)
-        self.delete_btn_x = ctk.CTkButton(self.button_frame_x, text="Xóa", corner_radius=10, fg_color="#e74c3c", font=("Segoe UI", 15), width=100)
+        self.add_btn_x = ctk.CTkButton(self.button_frame_x, text="Thêm", command=self.add_vehicle_window, corner_radius=10, fg_color="#27ae60", font=("Segoe UI", 15), width=100)
+        self.update_btn_x = ctk.CTkButton(self.button_frame_x, text="Sửa", command=self.update_vehicle, corner_radius=10, fg_color="#f39c12", font=("Segoe UI", 15), width=100)
+        self.cancel_btn_x = ctk.CTkButton(self.button_frame_x, text="Hủy", command=self.clear_selection_and_form, corner_radius=10, fg_color="#7f8c8d", font=("Segoe UI", 15), width=100)
+        self.delete_btn_x = ctk.CTkButton(self.button_frame_x, text="Xóa", command=self.delete_vehicle, corner_radius=10, fg_color="#e74c3c", font=("Segoe UI", 15), width=100)
+
+    # Hàm tải dữ liệu
+    def load_vehicles_data(self, data):
+        for item in self.tree_x.get_children():
+            self.tree_x.delete(item)
+        for item in data:
+            self.tree_x.insert("", "end", values=item)
 
     def on_vehicle_select(self, event):
-        if self.current_view != "vehicles": return
-        print("Đã chọn một xe")
-        # Code lấy dữ liệu từ self.tree_v và điền vào form xe
-        self._show_edit_buttons()
+        if self.current_view != "vehicles": return # Chỉ chạy khi đang ở view bãi
+        selected_items = self.tree_x.selection()
+        if not selected_items: return
+        values = self.tree_x.item(selected_items[0], "values")
+
+        self.original_vehicle_data = values # Lưu dữ liệu gốc khi chọn
+        
+        self.form_fields_x["ID:"].set(values[0])
+        self.form_fields_x["Biển số xe:"].set(values[1])
+
+        self.selected_vehicle_id = values[0]
+        self._show_vehicle_edit_buttons()
 
     def add_vehicle_window(self):
-        print("Mở cửa sổ thêm Xe")
+        # Tạo cửa sổ thêm mặt hàng
+        add_window = tk.Toplevel(self.root_window)
+        add_window.title("Thêm xe mới")
+        
+        window_width = 400
+        window_height = 150
+
+        screen_width = self.root_window.winfo_screenwidth()
+        screen_height = self.root_window.winfo_screenheight()
+
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+
+        add_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+        add_window.resizable(False, False) # Không cho phép thay đổi kích thước
+        add_window.configure(bg="#f7f9fc")
+        add_window.transient(self.root_window)# Cửa sổ luôn ở trên cùng
+        add_window.grab_set()
+
+        # Frame chứa form 
+        form_add = tk.Frame(add_window, bg="#f7f9fc", padx=20, pady=20)
+        form_add.pack(expand=True, fill="both")
+
+        add_fields = {
+        "Biển số xe:": tk.StringVar(),
+        }
+
+        for label_text, var in add_fields.items():
+            row = tk.Frame(form_add, bg="#f7f9fc")
+            row.pack(fill="x", pady=8)
+
+            label = tk.Label(row, text=label_text, width=12, anchor="w", bg="#f7f9fc", font=("Segoe UI", 10))
+            label.pack(side="left")
+
+            entry = tk.Entry(row, textvariable=var, font=("Segoe UI", 10))
+            entry.pack(side="left", expand=True, fill="x") 
+            
+        # Hàm lưu mặt hàng mới
+        def save_new_vehicle():
+            bien_so = add_fields["Biển số xe:"].get().strip()
+
+            # Gọi phương thức add_item từ controller
+            self.controller.add_vehicle(bien_so)
+            add_window.destroy()
+
+        def close_add_window():
+            add_window.destroy()
+
+        # Nút lưu và hủy
+        button_frame_add = tk.Frame(form_add, bg="#f7f9fc")
+        button_frame_add.pack(fill="x", pady=(20, 0))
+
+        add_btn = ctk.CTkButton(button_frame_add, text="Lưu", command=save_new_vehicle, fg_color="#2ecc71", font=("Segoe UI", 15, "bold"), width=100)
+        add_btn.pack(side="right", padx=5)
+
+        cancel_btn = ctk.CTkButton(button_frame_add, text="Hủy", command=close_add_window, fg_color="#e74c3c", font=("Segoe UI", 15, "bold"), width=100)
+        cancel_btn.pack(side="right")
 
     def update_vehicle(self):
-        print("Cập nhật Xe")
+        # 1. Kiểm tra xem có bãi nào được chọn trong form không
+        selected_id = self.form_fields_x["ID:"].get()
+        if not selected_id:
+            messagebox.showwarning("Cảnh báo", "Vui lòng chọn một xe để sửa!")
+            return
+
+        # 2. Lấy dữ liệu đã được người dùng chỉnh sửa từ các ô Entry
+        bien_so = self.form_fields_x["Biển số xe:"].get().strip()
+
+        # 3. So sánh dữ liệu mới với dữ liệu gốc
+        if self.original_vehicle_data:
+            _, original_vehicle = self.original_vehicle_data
+            if (bien_so == original_vehicle):
+                messagebox.showinfo("Thông báo", "Không có thay đổi nào để cập nhật.")
+                return
+
+        # 4. Kiểm tra dữ liệu đầu vào (ví dụ: tên không được để trống)
+        if not bien_so:
+            messagebox.showerror("Lỗi", "Tên bãi không được để trống.")
+            return
+
+        # 5. Yêu cầu xác nhận từ người dùng
+        confirm = messagebox.askyesno(
+            "Xác nhận sửa", 
+            "Xác nhận thay đổi thông tin xe?"
+        )
+        
+        if not confirm:
+            return # Nếu người dùng chọn "No", không làm gì cả
+
+        try:
+            # 6. Gọi phương thức update_yard từ controller để lưu vào database
+            self.controller.update_vehicle(selected_id, bien_so)
+            
+            # 7. Cập nhật lại dòng tương ứng trong Treeview
+            selection = self.tree_x.selection()
+            if selection:            
+                selected_item = self.tree_x.selection()[0]
+                self.tree_x.item(selected_item, values=(selected_id, bien_so))
+                # Cập nhật lại dữ liệu gốc sau khi đã lưu thành công
+                self.original_vehicle_data = (selected_id, bien_so)
+
+        except Exception as e:
+            # Bắt lỗi nếu có sự cố xảy ra và thông báo cho người dùng
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi cập nhật: {e}")
 
     def delete_vehicle(self):
-        print("Xóa Xe")
+        selected_id = self.form_fields_x["ID:"].get()
+        selected_tree_item = self.tree_x.selection()
+        if not selected_id:
+            messagebox.showwarning("Cảnh báo", "Vui lòng chọn một xe để xóa !")
+            return
+        
+        confirm = messagebox.askyesno("Xác nhận xóa", f"Bạn có chắc muốn xóa xe này !")
+        if not confirm:
+            return
+        # Gọi phương thức delete_item từ controller
+        self.controller.delete_vehicle(selected_id)
+        # Xóa thông tin trong form
+        self.tree_x.delete(selected_tree_item)
+        self.clear_vehicle_detail_form()
+
+    def clear_vehicle_detail_form(self):
+        """Xóa toàn bộ nội dung trong các ô Entry của form chi tiết."""
+        for var in self.form_fields_x.values():
+            var.set("")
+        self.original_vehicle_data = None
+        self.selected_vehicle_id = None
 
 # ==============================================================================
 # 4. HÀM QUẢN LÝ TRẠNG THÁI NÚT BẤM VÀ FORM
 # ==============================================================================
-    def _show_vehicle_initial_buttons_(self):
-        self.update_btn_x.pack_forget()
-        self.cancel_btn_x.pack_forget()
-        self.delete_btn_x.pack_forget()
-        self.add_btn_x.pack(side="left", expand=True, fill="x")
+    def _show_vehicle_initial_buttons(self):
+        """Ẩn form chi tiết xe và chỉ hiển thị nút Thêm xe."""
+        self.vehicle_details_container.pack_forget()
+        self.add_btn_x.pack(expand=True, fill="x")
 
     def _show_vehicle_edit_buttons(self):
+        """Hiển thị form chi tiết xe và các nút Sửa, Hủy, Xóa."""
         self.add_btn_x.pack_forget()
+        self.vehicle_details_container.pack(fill="both", expand=True, padx=20)
         self.update_btn_x.pack(side="left", expand=True, padx=(0, 5), fill="x")
         self.cancel_btn_x.pack(side="left", expand=True, padx=5, fill="x")
         self.delete_btn_x.pack(side="left", expand=True, padx=(5, 0), fill="x")
     
     def _show_initial_buttons(self):
-        self.update_btn.pack_forget()
-        self.cancel_btn.pack_forget()
-        self.delete_btn.pack_forget()
-        self.add_btn.pack(side="left", expand=True, fill="x")
+        """Ẩn form chi tiết bãi và chỉ hiển thị nút Thêm bãi."""
+        self.yard_details_container.pack_forget()
+        self.add_btn_y.pack(expand=True, fill="x")
 
     def _show_edit_buttons(self):
-        self.add_btn.pack_forget()
-        self.update_btn.pack(side="left", expand=True, padx=(0, 5), fill="x")
-        self.cancel_btn.pack(side="left", expand=True, padx=5, fill="x")
-        self.delete_btn.pack(side="left", expand=True, padx=(5, 0), fill="x")
+        """Hiển thị form chi tiết bãi và các nút Sửa, Hủy, Xóa."""
+        self.add_btn_y.pack_forget()
+        self.yard_details_container.pack(fill="both", expand=True, padx=20)
+        self.update_btn_y.pack(side="left", expand=True, padx=(0, 5), fill="x")
+        self.cancel_btn_y.pack(side="left", expand=True, padx=5, fill="x")
+        self.delete_btn_y.pack(side="left", expand=True, padx=(5, 0), fill="x")
 
     def clear_selection_and_form(self):
         """Xóa lựa chọn và form cho view hiện tại."""
@@ -373,11 +549,14 @@ class YardVehicleManagementView(tk.Frame):
             for var in self.form_fields_y.values():
                 var.set("")
             self.original_yard_data = None
-        # elif self.current_view == "vehicles":
-        #     if hasattr(self, 'add_btn_x'):
-        #         self._show_initial_buttons(self.add_btn_x, self.update_btn_x, self.cancel_btn_x, self.delete_btn_x)
+            self._show_initial_buttons()
+        elif self.current_view == "vehicles":
+            if self.tree_x.selection():
+                self.tree_x.selection_remove(self.tree_x.selection())
+            for var in self.form_fields_x.values():
+                var.set("")
+            self.original_vehicle_data = None
         
-        self.selected_customer_id = None
-        # Gọi hàm để hiển thị nút thêm khi chưa chọn dòng dữ liệu ở cả 2 giao diện
-        self._show_initial_buttons()
-        self._show_vehicle_initial_buttons_()
+        self.selected_yard_id = None
+        self.selected_vehicle_id = None
+        self._show_vehicle_initial_buttons()
