@@ -23,54 +23,48 @@ class CustomerModel(BaseModel):
 
     # Thêm hàm: add(), update(), delete()...
     def add_customer(self, ten_kh, dia_chi, so_dien_thoai):
-        conn = sqlite3.connect("database/CSP_0708.db")
-        cursor = conn.cursor()
         try:
             # Thêm khách hàng mới
-            cursor.execute("INSERT INTO customers (ten, sdt) VALUES (?, ?)", (ten_kh, so_dien_thoai))
-            id_kh = cursor.lastrowid  # Lấy id khách hàng vừa thêm
+            self.cursor.execute("INSERT INTO customers (ten, sdt) VALUES (?, ?)", (ten_kh, so_dien_thoai))
+            id_kh = self.cursor.lastrowid  # Lấy id khách hàng vừa thêm
 
             # Thêm địa chỉ, liên kết với id_kh
-            cursor.execute(
+            self.cursor.execute(
                 "INSERT INTO addresses (dia_chi, id_kh) VALUES (?, ?)",
                 (dia_chi, id_kh)
             )
-            conn.commit()
-        except Exception as e:
+            self.conn.commit()
+        except sqlite3.Error as e:
+            self.conn.rollback()
             print(f"Lỗi khi thêm khách hàng: {e}")
-        finally:
-            conn.close()
+            raise e
             
     def update_customer(self, selected_id, ten_kh, dia_chi, so_dien_thoai):
-        conn = sqlite3.connect("database/CSP_0708.db")
-        cursor = conn.cursor()
         try:
             # Cập nhật thông tin khách hàng
-            cursor.execute(
+            self.cursor.execute(
                 "UPDATE customers SET ten=?, sdt=? WHERE id_kh=?",
                 (ten_kh, so_dien_thoai, selected_id)
             )
             # Cập nhật địa chỉ liên kết với khách hàng
-            cursor.execute(
+            self.cursor.execute(
                 "UPDATE addresses SET dia_chi=? WHERE id_kh=?",
                 (dia_chi, selected_id)
             )
-            conn.commit()
-        except Exception as e:
+            self.conn.commit()
+        except sqlite3.Error as e:
+            self.conn.rollback()
             print(f"Lỗi khi cập nhật thông tin khách hàng: {e}")
-        finally:
-            conn.close()
+            raise e
 
     def delete_customer(self, selected_id):
-        conn = sqlite3.connect("database/CSP_0708.db")
-        cursor = conn.cursor()
         try:
             # Xóa địa chỉ liên kết với khách hàng
-            cursor.execute("DELETE FROM addresses WHERE id_kh=?", (selected_id,))
+            self.cursor.execute("DELETE FROM addresses WHERE id_kh=?", (selected_id,))
             # Xóa khách hàng
-            cursor.execute("DELETE FROM customers WHERE id_kh=?", (selected_id,))
-            conn.commit()
-        except Exception as e:
+            self.cursor.execute("DELETE FROM customers WHERE id_kh=?", (selected_id,))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            self.conn.rollback()
             print(f"Lỗi khi xóa khách hàng: {e}")
-        finally:
-            conn.close()
+            raise e

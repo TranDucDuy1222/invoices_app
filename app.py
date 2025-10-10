@@ -2,6 +2,9 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 from PIL import Image, ImageTk
+import os
+import sys
+
 
 # Import Controller
 from controllers.products_controller import ProductController
@@ -22,16 +25,34 @@ from views.bai import YardVehicleManagementView
 from views.debt_view import CongNoView
 from views.setting_view import CaiDatView
 
+def resource_path(relative_path):
+    """ Lấy đường dẫn tuyệt đối đến tài nguyên, hoạt động cho cả chế độ dev và PyInstaller """
+    try:
+        # PyInstaller tạo một thư mục tạm thời và lưu đường dẫn trong _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        # Nếu không phải PyInstaller, dùng đường dẫn thông thường
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
         
-        self.geometry("1100x700")
-        self.title("Quản lý hóa đơn")
+        self.geometry("1730x970")
+        # Mở ứng dụng ở trạng thái toàn màn hình (maximized)
+        # self.state('zoomed')
+        self.title("Quản Lý Hóa Đơn Công Ty TNHH TM DV Tính Khang Phúc")
+        try:
+            icon_path = resource_path('icons/Logo_1.ico') 
+            self.iconbitmap(icon_path)
+        except Exception as e:
+            # In ra lỗi cụ thể thay vì bỏ qua
+            print(f"Không thể tải icon ứng dụng: {e}")
 
         # Kết nối với cơ sở dữ liệu
-        self.db_path = "database/CSP_0708.db"
+        self.db_path = resource_path("database/CSP_0708.db")
     
         self.configure(bg="#f0f0f0")
 
@@ -76,7 +97,8 @@ class App(tk.Tk):
         for name, icon_file in tab_info.items():
             try:
                 # Mở file ảnh và thay đổi kích thước
-                img = Image.open(f"icons/{icon_file}")
+                icon_path = resource_path(f"icons/{icon_file}")
+                img = Image.open(icon_path)
                 img_resized = img.resize((24, 24), Image.LANCZOS)
                 self.tab_icons[name] = ImageTk.PhotoImage(img_resized)
 
@@ -111,7 +133,8 @@ class App(tk.Tk):
 
         try:
             # Load icon setting
-            settings_img = Image.open("icons/setting.png")
+            settings_icon_path = resource_path("icons/setting.png")
+            settings_img = Image.open(settings_icon_path)
             settings_img_resized = settings_img.resize((30, 30), Image.LANCZOS)
             self.settings_icon = ImageTk.PhotoImage(settings_img_resized)
 
@@ -186,6 +209,11 @@ class App(tk.Tk):
         if hasattr(self, 'products_controller'):
             self.products_controller.refresh_data()
 
+    def refresh_invoice_creation_data(self):
+        """Yêu cầu InvoiceController tải lại dữ liệu (sản phẩm, khách hàng, xe)."""
+        if hasattr(self, 'invoice_controller'):
+            self.invoice_controller.refresh_data()
+
     def refresh_debt_data(self):
         """Yêu cầu DebtController tải lại dữ liệu công nợ."""
         if self.debt_controller:
@@ -200,4 +228,3 @@ class App(tk.Tk):
 if __name__ == "__main__":
     app = App()
     app.mainloop()
-    

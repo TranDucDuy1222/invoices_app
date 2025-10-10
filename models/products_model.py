@@ -43,40 +43,43 @@ class ProductModel(BaseModel):
 
     # Thêm hàm: add(), update(), delete()...
     def add_item(self, id_bai, ten, prices_str, units_str):
-        conn = sqlite3.connect("database/CSP_0708.db")
-        cursor = conn.cursor()
-        if id_bai is not None:
-            cursor.execute(
-                "INSERT INTO products (ten_sp, don_vi_tinh, gia_ban, id_bai) VALUES (?, ?, ?, ?)",
-                (ten, units_str, prices_str, id_bai)
-            )
-        else:
-            cursor.execute(
-                "INSERT INTO products (ten_sp, don_vi_tinh, gia_ban) VALUES (?, ?, ?)",
-                (ten, units_str, prices_str)
-            )
-        conn.commit()
-        conn.close()
+        try:
+            if id_bai is not None:
+                self.cursor.execute(
+                    "INSERT INTO products (ten_sp, don_vi_tinh, gia_ban, id_bai) VALUES (?, ?, ?, ?)",
+                    (ten, units_str, prices_str, id_bai)
+                )
+            else:
+                self.cursor.execute(
+                    "INSERT INTO products (ten_sp, don_vi_tinh, gia_ban) VALUES (?, ?, ?)",
+                    (ten, units_str, prices_str)
+                )
+            self.conn.commit()
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise e
     
     def update_item(self, selected_id, id_bai, ten, gia_int, donvi):
-        conn = sqlite3.connect("database/CSP_0708.db")
-        cursor = conn.cursor()
-        if id_bai is not None:
-            cursor.execute(
-                "UPDATE products SET ten_sp=?, don_vi_tinh=?, gia_ban=?, id_bai=? WHERE id_sp=?",
-                (ten, donvi, gia_int, id_bai, selected_id)
-            )
-        else:
-            cursor.execute(
-                "UPDATE products SET ten_sp=?, don_vi_tinh=?, gia_ban=? WHERE id_sp=?",
-                (ten, donvi, gia_int, selected_id)
-            )
-        conn.commit()
-        conn.close()
+        try:
+            if id_bai is not None:
+                self.cursor.execute(
+                    "UPDATE products SET ten_sp=?, don_vi_tinh=?, gia_ban=?, id_bai=? WHERE id_sp=?",
+                    (ten, donvi, gia_int, id_bai, selected_id)
+                )
+            else:
+                self.cursor.execute(
+                    "UPDATE products SET ten_sp=?, don_vi_tinh=?, gia_ban=? WHERE id_sp=?",
+                    (ten, donvi, gia_int, selected_id)
+                )
+            self.conn.commit()
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise e
 
     def delete_item(self, selected_id):
-        conn = sqlite3.connect("database/CSP_0708.db")
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM products WHERE id_sp=?", (selected_id,))
-        conn.commit()
-        conn.close()
+        try:
+            self.cursor.execute("DELETE FROM products WHERE id_sp=?", (selected_id,))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise e

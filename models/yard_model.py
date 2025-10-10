@@ -27,56 +27,50 @@ class YardModel(BaseModel):
             return []
         
     def add_vehicle(self, bien_so):
-        conn = sqlite3.connect("database/CSP_0708.db")
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO cars (bien_so) VALUES (?)",
-            (bien_so,)
-        )
-        conn.commit()
-        conn.close()
+        try:
+            self.cursor.execute("INSERT INTO cars (bien_so) VALUES (?)", (bien_so,))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise e
 
     def delete_vehicle(self, selected_id):
-        conn = sqlite3.connect("database/CSP_0708.db")
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM cars WHERE id_car=?", (selected_id,))
-        conn.commit()
-        conn.close()
+        try:
+            self.cursor.execute("DELETE FROM cars WHERE id_car=?", (selected_id,))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise e
 
     # Thêm hàm: add(), update(), delete()...
     def add_yard(self, ten_bai, dia_chi):
-        conn = sqlite3.connect("database/CSP_0708.db")
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO yards (ten_bai, dia_chi) VALUES (?, ?)",
-            (ten_bai, dia_chi)
-        )
-        conn.commit()
-        conn.close()
+        try:
+            self.cursor.execute("INSERT INTO yards (ten_bai, dia_chi) VALUES (?, ?)", (ten_bai, dia_chi))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise e
 
     def update_vehicle(self, selected_id, bien_so):
-        conn = sqlite3.connect("database/CSP_0708.db")
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE cars SET bien_so=? WHERE id_car=?",
-            (bien_so, selected_id)
-        )
-        conn.commit()
-        conn.close()
+        try:
+            self.cursor.execute("UPDATE cars SET bien_so=? WHERE id_car=?", (bien_so, selected_id))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise e
     
     def update_yard(self, selected_id, ten_bai, dia_chi):
-        conn = sqlite3.connect("database/CSP_0708.db")
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE yards SET ten_bai=?, dia_chi=? WHERE id_bai=?",
-            (ten_bai, dia_chi, selected_id)
-        )
-        conn.commit()
-        conn.close()
+        try:
+            self.cursor.execute("UPDATE yards SET ten_bai=?, dia_chi=? WHERE id_bai=?", (ten_bai, dia_chi, selected_id))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise e
 
     def delete_yard(self, selected_id):
-        conn = sqlite3.connect("database/CSP_0708.db")
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM yards WHERE id_bai=?", (selected_id,))
-        conn.commit()
-        conn.close()
+        try:
+            self.cursor.execute("DELETE FROM yards WHERE id_bai=?", (selected_id,))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise e

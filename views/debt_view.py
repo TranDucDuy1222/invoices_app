@@ -37,11 +37,11 @@ class CongNoView(tk.Frame):
         left_frame.grid_columnconfigure(0, weight=1)
         
         # -- Label danh sách --
-        tk.Label(left_frame, text="Danh sách công nợ", font=("Segoe UI", 14, "bold"), bg="white").grid(row=1, column=0, sticky="w", pady=(5, 5))
+        tk.Label(left_frame, text="Danh sách công nợ", font=("Segoe UI", 14, "bold"), bg="white").grid(row=0, column=0, sticky="w", pady=(5, 5))
 
         # -- Thanh tìm kiếm --
         search_frame = ctk.CTkFrame(left_frame, fg_color="white")
-        search_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        search_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
         search_frame.grid_columnconfigure(0, weight=1)
         
         self.search_var = ctk.StringVar()

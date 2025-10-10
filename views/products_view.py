@@ -12,7 +12,9 @@ class MatHangView(tk.Frame):
         self.root_window = root_window # Lưu lại cửa sổ gốc để dùng cho Toplevel
         self.selected_item_id = None
         self.original_item_data = None
+        self.all_products_data = [] # Biến để lưu toàn bộ danh sách sản phẩm
         # Gọi phương thức để tạo tất cả các widget
+        self.vcmd = (self.register(self.validate_and_format_price), '%P')
         self.create_widgets()
 
     # Phương thức để tạo các widget trong frame 
@@ -22,22 +24,48 @@ class MatHangView(tk.Frame):
         left_frame.pack(side="left", fill="both", expand=True, padx=(0, 10))
 
         tk.Label(left_frame, text="Danh sách mặt hàng", font=("Segoe UI", 16, "bold"), bg="white").pack(pady=(0, 10), anchor="w")
+
+        # -- Thanh tìm kiếm --
+        search_frame = ctk.CTkFrame(left_frame, fg_color="white")
+        search_frame.pack(fill="x", pady=(0, 10)) # Sử dụng pack thay vì grid
+        
+        self.search_var = ctk.StringVar()
+        search_entry = ctk.CTkEntry(
+            search_frame,
+            textvariable=self.search_var,
+            fg_color="white",
+            text_color="grey", # Màu chữ ban đầu cho placeholder
+            font=("Arial", 11),  
+            corner_radius=10,
+            border_width=2,
+            border_color="#474646"
+        )
+        # Thêm placeholder và gán sự kiện thủ công
+        self.placeholder = "Tìm kiếm mặt hàng..."
+        search_entry.insert(0, self.placeholder)
+        search_entry.bind("<FocusIn>", self.on_search_focus_in)
+        search_entry.bind("<FocusOut>", self.on_search_focus_out)
+        search_entry.bind("<KeyRelease>", self.filter_products) # Gán sự kiện tìm kiếm
+        search_entry.pack(expand=True, fill="x", padx=5, pady=5)
+
         style = ttk.Style()
         # Cấu hình style cho Treeview để mỗi hàng cao 40px, đủ cho 2 dòng text
         style.configure("Treeview", rowheight=40, font=("Segoe UI", 10))
         style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
 
-        columns = ("id", "ten_mat_hang", "don_vi_gia", "ten_bai")
+        columns = ("id", "ten_hien_thi", "don_vi_gia", "ten_sp_goc", "ten_bai_goc")
         self.tree_mh = ttk.Treeview(left_frame, columns=columns, show="headings", selectmode="browse")
 
         self.tree_mh.heading("id", text="ID")
-        self.tree_mh.heading("ten_mat_hang", text="Tên mặt hàng")
+        self.tree_mh.heading("ten_hien_thi", text="Tên mặt hàng")
         self.tree_mh.heading("don_vi_gia", text="Đơn vị : Giá")
 
         self.tree_mh.column("id", width=50, anchor="center")
-        self.tree_mh.column("ten_mat_hang", width=200)
+        self.tree_mh.column("ten_hien_thi", width=200)
         self.tree_mh.column("don_vi_gia", width=300)
-        self.tree_mh.column("ten_bai", width=0, stretch=False)
+        # Ẩn 2 cột chứa dữ liệu gốc
+        self.tree_mh.column("ten_sp_goc", width=0, stretch=False)
+        self.tree_mh.column("ten_bai_goc", width=0, stretch=False)
 
         # Thanh cuộn
         scrollbar_mh = ttk.Scrollbar(left_frame, orient="vertical", command=self.tree_mh.yview)
@@ -50,7 +78,7 @@ class MatHangView(tk.Frame):
 
         # Form thông tin chi tiết
         right_frame = tk.Frame(self, bg="#f7f9fc", width=550)
-        right_frame.pack(side="right", fill="y", padx=(10, 0))
+        right_frame.pack(side="right", fill="y", padx=(10, 0), pady=10)
         right_frame.pack_propagate(False)
 
         # --- Frame chứa nút Thêm chính, luôn hiển thị ---
@@ -149,6 +177,9 @@ class MatHangView(tk.Frame):
         """
         for item in self.tree_mh.get_children():
             self.tree_mh.delete(item)
+        
+        self.all_products_data = data # Lưu lại toàn bộ dữ liệu
+
         for item in data:
             self.tree_mh.insert("", "end", values=item)
 
@@ -194,10 +225,10 @@ class MatHangView(tk.Frame):
         self.clear_price_entries()
 
         # Tách dữ liệu ra các biến riêng
-        item_id = values[0]
-        ten_sp = values[1]
-        unit_price_str = values[2] # "m3 : 150.000 | xe : 2.000.000"
-        ten_bai = values[3] or ''
+        item_id, _, unit_price_str, ten_sp, ten_bai = values
+        ten_bai = ten_bai or ''
+        # ten_hien_thi (values[1]) không được sử dụng trực tiếp để điền form
+        # mà sử dụng ten_sp (values[3]) và ten_bai (values[4])
 
         # Điền dữ liệu chung
         self.form_fields_mh["ID:"].set(item_id)
@@ -215,9 +246,43 @@ class MatHangView(tk.Frame):
                     self._add_price_row_to_details(unit, price)
 
         # Gán dữ liệu lại cho biến dữ diệu gốc
-        self.original_item_data = (item_id, ten_sp, unit_price_str, ten_bai)
+        self.original_item_data = (item_id, values[1], unit_price_str, ten_bai) # Lưu tên hiển thị gốc
         self.selected_item_id = values[0]
         self._show_edit_buttons()
+
+    def filter_products(self, event=None):
+        """Lọc danh sách sản phẩm dựa trên tên."""
+        search_term = self.search_var.get().lower().strip()
+
+        # Xóa các dòng hiện tại trong treeview
+        for i in self.tree_mh.get_children():
+            self.tree_mh.delete(i)
+
+        # Lặp qua dữ liệu gốc đã lưu và chèn lại nếu khớp
+        for item_data in self.all_products_data:
+            # item_data[1] là cột 'ten_hien_thi' (ví dụ: "Sản phẩm A (Bãi: Gò Vấp)")
+            product_name = item_data[1].lower()
+            if search_term in product_name:
+                self.tree_mh.insert("", "end", values=item_data)
+
+        # Nếu đang ở chế độ sửa, xóa lựa chọn để tránh nhầm lẫn
+        if self.selected_item_id:
+            self.clear_selection_and_form()
+
+    def on_search_focus_in(self, event):
+        """Xử lý sự kiện khi ô tìm kiếm được focus."""
+        if self.search_var.get() == self.placeholder:
+            # Xóa placeholder và đổi màu chữ thành đen
+            event.widget.delete(0, "end")
+            event.widget.configure(text_color="black")
+
+    def on_search_focus_out(self, event):
+        """Xử lý sự kiện khi ô tìm kiếm mất focus."""
+        if not self.search_var.get():
+            # Nếu trống, hiện lại placeholder và đổi màu chữ thành xám
+            event.widget.insert(0, self.placeholder)
+            event.widget.configure(text_color="grey")
+
 
     # Tạo nút bấm 1 lần
     # def _create_main_buttons(self):
@@ -301,7 +366,7 @@ class MatHangView(tk.Frame):
                 bg="#f7f9fc", font=("Segoe UI", 10)
             ).pack(side="left")
 
-            gia_entry = tk.Entry(row, font=("Segoe UI", 10))
+            gia_entry = tk.Entry(row, font=("Segoe UI", 10), validate="key", validatecommand=self.vcmd, justify="right")
             gia_entry.pack(side="left", expand=True, fill="x")
 
             price_entries.append({'don_vi': don_vi_entry, 'gia': gia_entry, 'frame': row})
@@ -390,7 +455,7 @@ class MatHangView(tk.Frame):
         don_vi_entry.insert(0, unit)
 
         tk.Label(row, text="Giá:", anchor="w", bg="#f7f9fc", font=("Segoe UI", 10)).pack(side="left")
-        gia_entry = tk.Entry(row, font=("Segoe UI", 10))
+        gia_entry = tk.Entry(row, font=("Segoe UI", 10), validate="key", validatecommand=self.vcmd, justify="right")
         gia_entry.pack(side="left", expand=True, fill="x")
         gia_entry.insert(0, price)
 
@@ -424,6 +489,29 @@ class MatHangView(tk.Frame):
         
         # Hủy frame đó khỏi giao diện
         row.destroy()
+
+    def validate_and_format_price(self, P):
+        """
+        Kiểm tra nhập liệu và tự động định dạng số với dấu chấm.
+        Được gọi mỗi khi có phím được nhấn trong ô giá.
+        """
+        # Chỉ cho phép nhập số
+        if P == "" or P.replace(".", "").isdigit():
+            # Bỏ các dấu chấm cũ để lấy số thuần
+            value_no_dots = P.replace(".", "")
+            if value_no_dots:
+                # Định dạng lại số với dấu chấm
+                formatted_value = f"{int(value_no_dots):,}".replace(",", ".")
+                # So sánh giá trị đã định dạng với giá trị hiện tại để tránh vòng lặp vô hạn
+                if formatted_value != P:
+                    # Tìm widget đang được focus và cập nhật giá trị của nó
+                    focused_widget = self.focus_get()
+                    if isinstance(focused_widget, tk.Entry):
+                        # Dùng after để đảm bảo widget được cập nhật sau khi sự kiện hiện tại kết thúc
+                        focused_widget.after(0, lambda: focused_widget.delete(0, 'end'))
+                        focused_widget.after(0, lambda: focused_widget.insert(0, formatted_value))
+            return True
+        return False
 
     def update_item(self):
         selected_id = self.form_fields_mh["ID:"].get()
@@ -476,9 +564,9 @@ class MatHangView(tk.Frame):
 
         # So sánh với dữ liệu gốc
         if self.original_item_data:
-            _, original_ten, original_unit_price_str, original_bai = self.original_item_data
+            _, original_ten_hien_thi, original_unit_price_str, original_bai = self.original_item_data
             # So sánh dữ liệu mới với dữ liệu gốc
-            if (ten_sp == original_ten and unit_price_str == original_unit_price_str and ten_bai == original_bai):
+            if (ten_sp == self.original_item_data[3] and unit_price_str == original_unit_price_str and ten_bai == original_bai):
                 messagebox.showinfo("Thông báo", "Không có thay đổi nào để cập nhật.")
                 return
 
@@ -489,7 +577,8 @@ class MatHangView(tk.Frame):
 
         # Cập nhật lại dữ liệu gốc sau khi xác nhận và trước khi gửi đi
         # để nếu người dùng bấm sửa lần nữa mà không thay đổi gì, nó sẽ không gửi lại
-        self.original_item_data = (selected_id, ten_sp, unit_price_str, ten_bai)
+        new_display_name = f"{ten_sp} (Bãi: {ten_bai})" if ten_bai else ten_sp
+        self.original_item_data = (selected_id, new_display_name, unit_price_str, ten_sp, ten_bai)
 
         try:
             # Gọi controller với dữ liệu mới
@@ -499,7 +588,6 @@ class MatHangView(tk.Frame):
     
     def delete_item(self):
         selected_id = self.form_fields_mh["ID:"].get()
-        selected_tree_item = self.tree_mh.selection()
         if not selected_id:
             messagebox.showwarning("Cảnh báo", "Vui lòng chọn một mặt hàng để xóa!")
             return
@@ -509,8 +597,8 @@ class MatHangView(tk.Frame):
             return
         # Gọi phương thức delete_item từ controller
         self.controller.delete_item(selected_id)
-        self.tree_mh.delete(selected_tree_item)
-        self.clear_details_form()
+        # Controller sẽ gọi refresh_data, tự động cập nhật Treeview.
+        self.clear_selection_and_form()
         
     # Hàm để xóa các dòng nhập đơn vị/giá sau khi chọn sản phẩm khác
     def clear_price_entries(self):

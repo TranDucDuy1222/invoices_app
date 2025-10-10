@@ -8,29 +8,24 @@ class YardController:
         self.view = view
         self.model = YardModel(db_path)
         self.app = view.root_window # Lưu lại tham chiếu đến cửa sổ chính (App)
-        self.view.controller = self
-        self.get_data()
-        self.get_vehicle_data()
+        self.view.controller = self # Gán controller cho view
+        self.refresh_data() # Tải dữ liệu ban đầu
 
-    def reload_data(self):
+    def load_yards(self):
+        """Tải danh sách bãi từ model và cập nhật view."""
         try:
-            # Lấy lại dữ liệu bãi từ model
             all_data = self.model.get_yard()
-            # Cập nhật lại view
             self.view.set_yard_list(all_data)
         except Exception as e:
             print("Lỗi khi load danh sách bãi:", e)
 
-    def reload_vehicle_data(self):
+    def load_vehicles(self):
+        """Tải danh sách xe từ model và cập nhật view."""
         try: 
             all_data = self.model.get_vehicle()
             self.view.load_vehicles_data(all_data)
         except Exception as e:
             print("Lỗi khi load danh sách xe:", e)
-
-    def get_vehicle_data(self):
-        all_data = self.model.get_vehicle()
-        self.view.load_vehicles_data(all_data)
 
     def add_vehicle(self, bien_so):
         if not bien_so:
@@ -38,9 +33,9 @@ class YardController:
                 return
         try:
             self.model.add_vehicle(bien_so)
-            messagebox.showinfo("Thành công", "Đã thêm xe mới!")
-            # Sau khi thêm, load lại danh sách mặt hàng
-            self.reload_vehicle_data()
+            messagebox.showinfo("Thành công", f"Đã thêm xe '{bien_so}'!")
+            self.refresh_data() # Tải lại dữ liệu cho tab hiện tại
+            self.app.refresh_invoice_creation_data() # Làm mới dữ liệu ở tab Tạo hóa đơn
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể thêm xe: {e}")
 
@@ -51,28 +46,22 @@ class YardController:
         try:
             # Gọi phương thức update_yard từ model
             self.model.update_vehicle(selected_id, bien_so)
-            messagebox.showinfo("Thành công", "Đã cập nhật thông tin xe!")
-            self.reload_vehicle_data()  # Tải lại danh sách sau khi cập nhật
+            messagebox.showinfo("Thành công", f"Đã cập nhật biển số xe: '{bien_so}'!")
+            self.refresh_data() # Tải lại dữ liệu cho tab hiện tại
+            self.app.refresh_invoice_creation_data() # Làm mới dữ liệu ở tab Tạo hóa đơn
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Không thể cập nhật bãi: {e}")
+            messagebox.showerror("Lỗi", f"Không thể cập nhật biển số xe: {e}")
 
     def delete_vehicle(self, selected_id):
         try:
             # Gọi phương thức delete_item từ model
             self.model.delete_vehicle(selected_id)
-            messagebox.showinfo("Thành công", "Đã xóa thông tin xe!")
+            messagebox.showinfo("Thành công", "Đã xóa biển số xe!")
+            self.refresh_data() # Tải lại dữ liệu cho tab hiện tại
+            self.app.refresh_invoice_creation_data() # Làm mới dữ liệu ở tab Tạo hóa đơn
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể xóa thông tin xe: {e}")
-
-    def get_data(self):
-        """
-        Lấy dữ liệu từ Model, xử lý chuỗi hiển thị, và cập nhật View.
-        """
-        # 1. Lấy dữ liệu thô từ model
-        all_data = self.model.get_yard()
-        
-        self.view.set_yard_list(all_data)
-
+    
     def add_yard(self, ten_bai, dia_chi):
         if not ten_bai or not dia_chi:
                 messagebox.showwarning("Thiếu thông tin", "Không thể thực hiện thao tác!")
@@ -80,9 +69,8 @@ class YardController:
         try:
             self.model.add_yard(ten_bai, dia_chi)
             messagebox.showinfo("Thành công", "Đã thêm bãi mới!")
-            # Sau khi thêm, load lại danh sách mặt hàng
-            self.reload_data()
-            self.app.refresh_product_page_data() # <-- THÊM DÒNG NÀY
+            self.refresh_data() # Tải lại dữ liệu cho tab hiện tại
+            self.app.refresh_product_page_data() # Làm mới dữ liệu ở tab Mặt hàng
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể thêm bãi: {e}")
 
@@ -94,19 +82,24 @@ class YardController:
             # Gọi phương thức update_yard từ model
             self.model.update_yard(selected_id, ten_bai, dia_chi)
             messagebox.showinfo("Thành công", "Đã cập nhật bãi!")
-            self.reload_data()  # Tải lại danh sách sau khi cập nhật
-            self.app.refresh_product_page_data() # <-- THÊM DÒNG NÀY
+            self.refresh_data() # Tải lại dữ liệu cho tab hiện tại
+            self.app.refresh_product_page_data() # Làm mới dữ liệu ở tab Mặt hàng
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể cập nhật bãi: {e}")
     
     def delete_yard(self, selected_id):
         try:
-            # Gọi phương thức delete_item từ model
             self.model.delete_yard(selected_id)
-            messagebox.showinfo("Thành công", "Đã xóa mặt hàng!")
-            self.app.refresh_product_page_data() # <-- THÊM DÒNG NÀY
+            messagebox.showinfo("Thành công", "Đã xóa bãi!")
+            self.refresh_data() # Tải lại dữ liệu cho tab hiện tại
+            self.app.refresh_product_page_data() # Làm mới dữ liệu ở tab Mặt hàng
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Không thể xóa mặt hàng: {e}")
+            messagebox.showerror("Lỗi", f"Không thể xóa bãi: {e}")
     
+    def refresh_data(self):
+        """Tải lại cả dữ liệu bãi và xe."""
+        self.load_yards()
+        self.load_vehicles()
+
     def __del__(self):
         self.model.close()

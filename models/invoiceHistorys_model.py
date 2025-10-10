@@ -55,7 +55,7 @@ class InvoiceHistoryModel(BaseModel):
             FROM invoices i
             JOIN customers c ON i.id_kh = c.id_kh
             LEFT JOIN addresses a ON c.id_kh = a.id_kh
-            WHERE i.trang_thai = 0 AND date(substr(i.ngay_mua, 7, 4) || '-' || substr(i.ngay_mua, 4, 2) || '-' || substr(i.ngay_mua, 1, 2)) BETWEEN date(?) AND date(?)
+            WHERE i.trang_thai = 0 AND date(substr(i.ngay_tao_hd, 7, 4) || '-' || substr(i.ngay_tao_hd, 4, 2) || '-' || substr(i.ngay_tao_hd, 1, 2)) BETWEEN date(?) AND date(?)
             GROUP BY c.id_kh, c.ten, a.dia_chi, c.sdt
             ORDER BY c.ten;
         """
@@ -78,7 +78,9 @@ class InvoiceHistoryModel(BaseModel):
                 id.noi_giao,
                 cr.bien_so,
                 y.ten_bai,
-                id.don_vi_tinh
+                id.don_vi_tinh,
+                id.don_gia,
+                id.phi_van_chuyen
             FROM invoice_details id
             JOIN products p ON id.id_sp = p.id_sp
             JOIN invoices i ON id.id_hd = i.id_hd
@@ -113,14 +115,16 @@ class InvoiceHistoryModel(BaseModel):
                 id.noi_giao,
                 cr.bien_so,
                 y.ten_bai,
-                id.don_vi_tinh
+                id.don_vi_tinh,
+                id.don_gia,
+                id.phi_van_chuyen
             FROM invoice_details id
             JOIN products p ON id.id_sp = p.id_sp
             JOIN invoices i ON id.id_hd = i.id_hd
             LEFT JOIN cars cr ON id.id_xe = cr.id_car
             LEFT JOIN yards y ON id.id_bai = y.id_bai
-            WHERE i.id_kh = ? AND i.trang_thai = 0 AND date(substr(i.ngay_mua, 7, 4) || '-' || substr(i.ngay_mua, 4, 2) || '-' || substr(i.ngay_mua, 1, 2)) BETWEEN date(?) AND date(?)
-            ORDER BY i.ngay_mua;
+            WHERE i.id_kh = ? AND i.trang_thai = 0 AND date(substr(i.ngay_tao_hd, 7, 4) || '-' || substr(i.ngay_tao_hd, 4, 2) || '-' || substr(i.ngay_tao_hd, 1, 2)) BETWEEN date(?) AND date(?)
+            ORDER BY i.ngay_tao_hd;
         """
         try:
             self.cursor.execute(query, (customer_id, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))

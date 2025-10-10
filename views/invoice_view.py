@@ -129,8 +129,8 @@ class TaoHoaDonView(tk.Frame):
         self.don_gia_entry.grid(row=0, column=2, sticky="ew")
         self.don_gia_entry.bind("<KeyRelease>", self.on_don_gia_key_release)
 
-        # Số lượng
-        tk.Label(left_frame, text="Số lượng:", font=("Segoe UI", 10), bg="#f7f9fc").grid(row=7, column=0, sticky="w", pady=5)
+        # Số chuyến
+        tk.Label(left_frame, text="Số chuyến:", font=("Segoe UI", 10), bg="#f7f9fc").grid(row=7, column=0, sticky="w", pady=5)
         self.so_luong_var = tk.IntVar(value=1)
         self.so_luong_entry = tk.Entry(left_frame, textvariable=self.so_luong_var, font=("Segoe UI", 10), validate="key", validatecommand=self.vcmd)
         self.so_luong_entry.grid(row=7, column=1, sticky="ew", pady=5)
@@ -200,24 +200,27 @@ class TaoHoaDonView(tk.Frame):
         order_list_container.grid_rowconfigure(0, weight=1)
         order_list_container.grid_columnconfigure(0, weight=1)
         
-        cols = ("ten_sp", "so_xe", "lay_tai_bai", "noi_giao", "don_vi", "so_luong", "phi_vc", "thanh_tien")
+        cols = ("ten_sp", "lay_tai_bai", "so_xe", "don_vi", "so_luong", "gia_tai_bai", "phi_vc", "thanh_tien", "noi_giao",)
         self.order_tree = ttk.Treeview(order_list_container, columns=cols, show="headings")
         self.order_tree.heading("ten_sp", text="Tên mặt hàng")
-        self.order_tree.heading("so_xe", text="Số xe")
         self.order_tree.heading("lay_tai_bai", text="Lấy tại bãi")
-        self.order_tree.heading("noi_giao", text="Nơi giao")
-        self.order_tree.heading("don_vi", text="Đơn vị")
-        self.order_tree.heading("so_luong", text="Số lượng")
+        self.order_tree.heading("so_xe", text="Số xe")
+        self.order_tree.heading("don_vi", text="Số khối")
+        self.order_tree.heading("so_luong", text="Số chuyến")
+        self.order_tree.heading("gia_tai_bai", text="Giá tại bãi")
         self.order_tree.heading("phi_vc", text="Phí vận chuyển")
         self.order_tree.heading("thanh_tien", text="Thành tiền")
+        self.order_tree.heading("noi_giao", text="Nơi giao")
 
         self.order_tree.column("ten_sp", width=150)
-        self.order_tree.column("so_xe", width=80, anchor="center")
         self.order_tree.column("lay_tai_bai", width=100)
-        self.order_tree.column("noi_giao", width=100)
+        self.order_tree.column("so_xe", width=80, anchor="center")
+        self.order_tree.column("don_vi", width=80, anchor="center")
         self.order_tree.column("so_luong", width=80, anchor="center")
+        self.order_tree.column("gia_tai_bai", width=120, anchor="e")
         self.order_tree.column("phi_vc", width=120, anchor="e")
         self.order_tree.column("thanh_tien", width=120, anchor="e")
+        self.order_tree.column("noi_giao", width=100)
         
         order_scrollbar = ttk.Scrollbar(order_list_container, orient="vertical", command=self.order_tree.yview)
         self.order_tree.configure(yscrollcommand=order_scrollbar.set)
@@ -373,8 +376,11 @@ class TaoHoaDonView(tk.Frame):
         self.don_vi_var.set(item_data["don_vi"])
         self.so_luong_var.set(item_data["so_luong"])
         self.phi_vc_var.set(str(item_data["phi_vc"] // 1000)) # Chuyển về dạng nghìn đồng
-        self.noi_giao_var.set(item_data["noi_giao"])
-        self.dia_chi_chi_tiet_var.set(item_data["dia_chi_chi_tiet"])
+        # THAY ĐỔI: Tách chuỗi "noi_giao" đã gộp để điền vào 2 ô riêng biệt
+        full_noi_giao = item_data.get("noi_giao", "")
+        noi_giao_part, _, dia_chi_part = full_noi_giao.partition(' - ')
+        self.noi_giao_var.set(noi_giao_part)
+        self.dia_chi_chi_tiet_var.set(dia_chi_part)
         self.car_var.set(item_data["so_xe"])
         self.calculate_subtotal()
 
@@ -471,15 +477,16 @@ class TaoHoaDonView(tk.Frame):
             existing_item["thanh_tien"] = (existing_item["don_gia"] * existing_item["so_luong"]) + existing_item["phi_vc"]
             
             # Cập nhật dòng tương ứng trong Treeview
-            self.order_tree.item(existing_item["iid"], values=(
-                existing_item["ten_sp"],
-                existing_item["so_xe"],
-                existing_item["lay_tai_bai"],
-                existing_item["noi_giao"],
-                existing_item["don_vi"],
-                existing_item["so_luong"],
-                f"{existing_item['phi_vc']:,}".replace(",", "."),
-                f"{existing_item['thanh_tien']:,}".replace(",", ".")
+            self.order_tree.item(existing_item["iid"], values=( # Sửa thứ tự
+                existing_item["ten_sp"], # ten_sp
+                existing_item["lay_tai_bai"], # lay_tai_bai
+                existing_item["so_xe"], # so_xe
+                existing_item["don_vi"], # don_vi
+                existing_item["so_luong"], # so_luong
+                f"{existing_item['don_gia']:,}".replace(",", "."), # gia_tai_bai
+                f"{existing_item['phi_vc']:,}".replace(",", "."), # phi_vc
+                f"{existing_item['thanh_tien']:,}".replace(",", "."), # thanh_tien
+                existing_item["noi_giao"] # noi_giao
             ))
         else:
             # Nếu không, thêm như một sản phẩm mới
@@ -501,9 +508,16 @@ class TaoHoaDonView(tk.Frame):
             }
             self.current_order_items.append(order_item)
             
-            self.order_tree.insert("", "end", iid=iid, values=(
-                real_ten_sp, selected_car_plate, ten_bai or " ", noi_giao,
-                don_vi, so_luong, f"{phi_vc:,.0f}".replace(",", "."), f"{thanh_tien:,.0f}".replace(",", ".")
+            self.order_tree.insert("", "end", iid=iid, values=( # Sửa thứ tự
+                real_ten_sp, # ten_sp
+                ten_bai or " ", # lay_tai_bai
+                selected_car_plate, # so_xe
+                don_vi, # don_vi
+                so_luong, # so_luong
+                f"{don_gia:,.0f}".replace(",", "."), # gia_tai_bai
+                f"{phi_vc:,.0f}".replace(",", "."), # phi_vc
+                f"{thanh_tien:,.0f}".replace(",", "."), # thanh_tien
+                full_noi_giao # noi_giao
             ))
         
         self.update_total_amount()
@@ -557,15 +571,16 @@ class TaoHoaDonView(tk.Frame):
         item_to_update['noi_giao'] = full_noi_giao
 
         # Cập nhật dòng trong Treeview
-        self.order_tree.item(self.editing_item_iid, values=(
-            item_to_update["ten_sp"], 
-            item_to_update["so_xe"],
-            item_to_update["lay_tai_bai"],
-            item_to_update["noi_giao"],
-            item_to_update["don_vi"], 
-            so_luong, 
-            f"{phi_vc:,.0f}".replace(",", "."), 
-            f"{thanh_tien:,.0f}".replace(",", ".")
+        self.order_tree.item(self.editing_item_iid, values=( # Sửa thứ tự
+            item_to_update["ten_sp"], # ten_sp
+            item_to_update["lay_tai_bai"], # lay_tai_bai
+            item_to_update["so_xe"], # so_xe
+            item_to_update["don_vi"], # don_vi
+            so_luong, # so_luong
+            f"{don_gia:,.0f}".replace(",", "."), # gia_tai_bai
+            f"{phi_vc:,.0f}".replace(",", "."), # phi_vc
+            f"{thanh_tien:,.0f}".replace(",", "."), # thanh_tien
+            item_to_update["noi_giao"] # noi_giao
         ))
         
         self.update_total_amount()

@@ -24,6 +24,12 @@ class InvoiceController:
         cars = self.model.get_all_cars()
         self.view.update_car_list(cars)
 
+    def refresh_data(self):
+        """Tải lại toàn bộ dữ liệu (sản phẩm, khách hàng, xe) cho trang tạo hóa đơn."""
+        self.load_products_invoice()
+        self.load_customers_invoice()
+        self.load_cars_invoice()
+
     def create_invoice(self, id_kh, ngay_mua, tong_tien, trang_thai, items):
         """
         Xử lý logic tạo hóa đơn, bao gồm lưu vào DB và cập nhật công nợ.

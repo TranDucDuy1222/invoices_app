@@ -49,6 +49,18 @@ class InvoiceHistoryController:
         else:
             messagebox.showerror("Lỗi in", message)
 
+    def export_invoice_to_pdf(self, invoice_data, items):
+        """
+        Chuẩn bị dữ liệu và gọi module để chỉ xuất file PDF.
+        """
+        printer = InvoicePrinter()
+        success, message = printer.export_invoice_pdf(invoice_data, items)
+
+        if success:
+            messagebox.showinfo("Xuất PDF thành công", message)
+        else:
+            messagebox.showerror("Lỗi xuất PDF", message)
+
     def pay_invoice(self, invoice_id, customer_id, total_amount):
         """Xử lý logic thanh toán cho một hóa đơn."""
         try:

@@ -33,7 +33,18 @@ class YardVehicleManagementView(tk.Frame):
         self.view_switcher = ctk.CTkSegmentedButton(
             top_frame,
             values=["Danh sách bãi", "Danh sách xe"],
-            command=self.switch_view
+            command=self.switch_view,
+            height=40, # Tăng chiều cao của nút
+            width= 80, # Tăng chiều rộng của nút
+            font=("Segoe UI", 15, "bold"), # Tăng cỡ chữ
+            corner_radius=12,
+            border_width=5, # Tạo khoảng cách 5px giữa các nút
+            fg_color="white", # Đặt màu nền widget trùng với màu nền của frame cha
+            selected_color="#3498db",
+            selected_hover_color="#2980b9",
+            unselected_color="grey", # Nền nút chưa chọn là màu trắng
+            unselected_hover_color="#3498db", # Khi hover, nền giống nút đã chọn
+            text_color=("black", "white") # (màu chữ chưa chọn, màu chữ đã chọn)
         )
         self.view_switcher.set("Danh sách bãi")
         self.view_switcher.pack(anchor="w")
@@ -356,7 +367,6 @@ class YardVehicleManagementView(tk.Frame):
 
         self.button_frame_x = button_frame_x
 
-        self.add_btn_x = ctk.CTkButton(self.button_frame_x, text="Thêm", command=self.add_vehicle_window, corner_radius=10, fg_color="#27ae60", font=("Segoe UI", 15), width=100)
         self.update_btn_x = ctk.CTkButton(self.button_frame_x, text="Sửa", command=self.update_vehicle, corner_radius=10, fg_color="#f39c12", font=("Segoe UI", 15), width=100)
         self.cancel_btn_x = ctk.CTkButton(self.button_frame_x, text="Hủy", command=self.clear_selection_and_form, corner_radius=10, fg_color="#7f8c8d", font=("Segoe UI", 15), width=100)
         self.delete_btn_x = ctk.CTkButton(self.button_frame_x, text="Xóa", command=self.delete_vehicle, corner_radius=10, fg_color="#e74c3c", font=("Segoe UI", 15), width=100)

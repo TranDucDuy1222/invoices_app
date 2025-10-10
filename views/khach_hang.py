@@ -10,6 +10,7 @@ class KhachHangView(tk.Frame):
         self.root_window = root_window
         self.selected_customer_id = None
         self.original_customer_data = None # Biến lưu dữ liệu gốc
+        self.all_customers_data = [] # Lưu toàn bộ danh sách khách hàng
         self.create_widgets()
 
     def create_widgets(self):  
@@ -18,6 +19,30 @@ class KhachHangView(tk.Frame):
         left_frame.pack(side='left', fill='both', expand=True, padx=(0, 10))
         
         tk.Label(left_frame, text="Danh sách khách hàng", font=("Segoe UI", 16, "bold"), bg="white").pack(pady=(0, 10), anchor="w")
+
+        # -- Thanh tìm kiếm --
+        search_frame = ctk.CTkFrame(left_frame, fg_color="white")
+        search_frame.pack(fill="x", pady=(0, 10)) # Sửa từ grid() sang pack()
+        
+        self.search_var = ctk.StringVar()
+        search_entry = ctk.CTkEntry(
+            search_frame,
+            textvariable=self.search_var,
+            fg_color="white", 
+            text_color="black",
+            font=("Arial", 11),  
+            corner_radius=10,
+            border_width=2,
+            border_color="#474646"
+        )
+        self.placeholder = "Tìm kiếm khách hàng..."
+        search_entry.insert(0, self.placeholder)        
+        search_entry.bind("<FocusIn>", self.on_search_focus_in)
+        search_entry.bind("<FocusOut>", self.on_search_focus_out)
+        search_entry.pack(expand=True, fill="x", padx=5, pady=5) # Sửa từ grid() sang pack()
+        
+        # Bind sự kiện KeyRelease thay vì dùng trace
+        search_entry.bind("<KeyRelease>", self.filter_data)
 
         # Thêm cột 'loai_kh' vào columns
         columns = ("id", "ten_khach_hang", "dia_chi", "sdt")
@@ -107,6 +132,39 @@ class KhachHangView(tk.Frame):
 
         self._show_initial_buttons()
 
+        # Xử lý sự kiện khi ô tìm kiếm được focus
+    def on_search_focus_in(self, event):
+        if self.search_var.get() == self.placeholder:
+            event.widget.delete(0, "end")
+            event.widget.config(fg='black')
+
+    # Xử lý sự kiện khi ô tìm kiếm mất focus
+    def on_search_focus_out(self, event):
+        if not self.search_var.get():
+            event.widget.config(fg='grey')
+            event.widget.insert(0, self.placeholder)
+
+    # Phương thức lọc dữ liệu
+    def filter_data(self, event=None):
+        """Lọc dữ liệu trong Treeview dựa trên nội dung ô tìm kiếm."""
+        search_term = self.search_var.get().lower().strip() if self.search_var.get() != self.placeholder else ""
+        
+        # Xóa hết các dòng hiện tại
+        for i in self.tree_kh.get_children():
+            self.tree_kh.delete(i)
+            
+        # Nếu không có từ khóa tìm kiếm, hiển thị tất cả
+        if not search_term:
+            for item in self.all_customers_data:
+                self.tree_kh.insert("", "end", values=item)
+            return
+                
+        # Lọc và hiển thị các dòng phù hợp
+        for item in self.all_customers_data:
+            # item[1] là cột 'ten_khach_hang'
+            if search_term in item[1].lower():
+                self.tree_kh.insert("", "end", values=item)
+
     def _show_initial_buttons(self):
         """Ẩn form chi tiết và chỉ hiển thị nút Thêm chính."""
         self.details_container_kh.pack_forget()
@@ -135,6 +193,9 @@ class KhachHangView(tk.Frame):
         """
         for item in self.tree_kh.get_children():
             self.tree_kh.delete(item)
+        
+        self.all_customers_data = data # Lưu lại dữ liệu gốc
+
         for item in data:
             self.tree_kh.insert("", "end", values=item)
 

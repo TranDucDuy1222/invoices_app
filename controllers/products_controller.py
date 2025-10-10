@@ -6,7 +6,8 @@ class ProductController:
     def __init__(self, view, db_path):
         self.view = view
         self.model = ProductModel(db_path)
-        self.view.controller = self
+        self.app = view.root_window # Lưu lại tham chiếu đến cửa sổ chính (App)
+        self.view.controller = self # Gán controller cho view
         self.load_products()
         self.load_yards()
 
@@ -24,7 +25,7 @@ class ProductController:
 
             # Kiểm tra xem sản phẩm có tên bãi không
             if ten_bai:
-                # Nếu có, tạo chuỗi đa dòng
+                # Nếu có, tạo chuỗi hiển thị mới
                 formatted_name = f"{ten_sp} (Bãi: {ten_bai})"
             else:
                 # Nếu không, chỉ dùng tên sản phẩm
@@ -32,20 +33,23 @@ class ProductController:
 
             # Xử lý và định dạng các cặp Đơn vị - Giá
             try:
-                units = str(don_vi).split('|')
-                prices = str(gia_ban).split('|')
+                # Tách chuỗi đơn vị và giá thành các danh sách
+                units = str(don_vi).split('|') if don_vi else []
+                prices = str(gia_ban).split('|') if gia_ban else []
                 
                 # Ghép cặp đơn vị và giá, sau đó định dạng
                 formatted_pairs = []
                 for unit, price in zip(units, prices):
-                    formatted_price = f"{int(price):,}".replace(",", ".")
+                    # Đảm bảo price là một chuỗi số hợp lệ trước khi chuyển đổi
+                    formatted_price = f"{int(price.strip()):,}".replace(",", ".") if price.strip().isdigit() else "Lỗi"
                     formatted_pairs.append(f"{unit} : {formatted_price}")
                 
                 unit_price_display = " | ".join(formatted_pairs)
             except (ValueError, TypeError, IndexError):
                 unit_price_display = "Lỗi định dạng"
 
-            display_row = (id_sp, formatted_name, unit_price_display, ten_bai)
+            # Trả về ten_sp và ten_bai riêng biệt
+            display_row = (id_sp, formatted_name, unit_price_display, ten_sp, ten_bai)
             display_data.append(display_row)
 
         # 3. Gọi phương thức của View để cập nhật Treeview với dữ liệu đã xử lý
@@ -63,34 +67,40 @@ class ProductController:
             # Chuyển đổi danh sách đơn vị và giá thành chuỗi để lưu vào DB
             units_str = "|".join(units)
             prices_str = "|".join(map(str, prices))
-
+            
             self.model.add_item(id_bai, ten, prices_str, units_str)
             messagebox.showinfo("Thành công", f"Đã thêm mặt hàng '{ten}'!")
             # Sau khi thêm, load lại danh sách mặt hàng
-            self.load_products()
+            self.refresh_data() # Làm mới danh sách sản phẩm hiện tại
+            self.app.refresh_invoice_creation_data() # Làm mới dữ liệu ở tab Tạo hóa đơn
         except Exception as e:
+            print(f"Lỗi khi thêm mặt hàng: {e}") # Ghi log lỗi ra terminal
             messagebox.showerror("Lỗi", f"Không thể thêm mặt hàng: {e}")
 
-    def update_item(self, item_id, id_bai, ten, units_str, prices_str):
+    def update_item(self, selected_id, id_bai, ten, units_str, prices_str):
         try:
-            # Gọi phương thức update_item của model với các chuỗi đã được nối
-            self.model.update_item(item_id, id_bai, ten, prices_str, units_str)
+            self.model.update_item(selected_id, id_bai, ten, prices_str,  units_str)
             messagebox.showinfo("Thành công", "Đã cập nhật thông tin mặt hàng!")
-            self.load_products()  # Tải lại danh sách sau khi cập nhật
+            self.refresh_data()  # Tải lại danh sách sau khi cập nhật
+            self.app.refresh_invoice_creation_data() # Làm mới dữ liệu ở tab Tạo hóa đơn
         except Exception as e:
+            print(f"Lỗi khi cập nhật mặt hàng: {e}") # Ghi log lỗi ra terminal
             messagebox.showerror("Lỗi", f"Không thể cập nhật thông tin mặt hàng: {e}")
     def delete_item(self, selected_id):
         try:
             # Gọi phương thức delete_item từ model
             self.model.delete_item(selected_id)
             messagebox.showinfo("Thành công", "Đã xóa mặt hàng!")
+            self.refresh_data() # Tải lại danh sách sản phẩm sau khi xóa
+            self.app.refresh_invoice_creation_data() # Làm mới dữ liệu ở tab Tạo hóa đơn
         except Exception as e:
+            print(f"Lỗi khi xóa mặt hàng: {e}") # Ghi log lỗi ra terminal
             messagebox.showerror("Lỗi", f"Không thể xóa mặt hàng: {e}")
     
-    def __del__(self):
-        self.model.close()
-
     def refresh_data(self):
-        """Tải lại dữ liệu cần thiết cho view (sản phẩm và bãi)."""
+        """Tải lại cả sản phẩm và bãi."""
         self.load_products()
         self.load_yards()
+
+    def __del__(self):
+        self.model.close()
