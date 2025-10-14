@@ -144,3 +144,21 @@ class InvoiceHistoryModel(BaseModel):
             self.conn.rollback()
             print(f"Lỗi khi cập nhật trạng thái hóa đơn: {e}")
             return False
+
+    def delete_invoice_by_id(self, invoice_id):
+        """Xóa một hóa đơn và các chi tiết liên quan của nó bằng ID."""
+        try:
+            # Bắt đầu một transaction
+            self.cursor.execute("BEGIN TRANSACTION;")
+            # Xóa các chi tiết hóa đơn trước để tránh lỗi khóa ngoại
+            self.cursor.execute("DELETE FROM invoice_details WHERE id_hd = ?", (invoice_id,))
+            # Xóa hóa đơn chính
+            self.cursor.execute("DELETE FROM invoices WHERE id_hd = ?", (invoice_id,))
+            # Commit transaction
+            self.conn.commit()
+            return True
+        except Exception as e:
+            # Nếu có lỗi, rollback tất cả thay đổi
+            self.conn.rollback()
+            print(f"Lỗi khi xóa hóa đơn #{invoice_id}: {e}")
+            return False

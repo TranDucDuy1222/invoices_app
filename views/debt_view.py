@@ -13,6 +13,10 @@ class CongNoView(tk.Frame):
         
         self.root_window = root_window # Lưu lại cửa sổ gốc để dùng cho Toplevel
         
+        # Biến để quản lý trạng thái chỉnh sửa
+        self.is_full_edit_mode = False
+        self.last_selected_id = None
+
 
         # Gọi phương thức để tạo tất cả các widget
         self.create_widgets()
@@ -116,9 +120,9 @@ class CongNoView(tk.Frame):
         # Công nợ hiện tại (chỉ đọc, được tính toán)
         tk.Label(right_frame, text="Công nợ hiện tại:", font=("Segoe UI", 10, "bold"), bg="#f7f9fc").grid(row=2, column=0, sticky="w", pady=5)
         tk.Label(right_frame, textvariable=self.update_fields_vars["Công nợ hiện tại:"], font=("Segoe UI", 11, "bold"), bg="#f7f9fc").grid(row=2, column=1, sticky="w", pady=5)
-        
+        self.cong_no_hien_tai_entry = tk.Entry(right_frame, textvariable=self.update_fields_vars["Công nợ hiện tại:"], font=("Segoe UI", 11, "bold"))
         # Nhập số tiền đã thanh toán (đây là ô người dùng nhập)
-        tk.Label(right_frame, text="Đã thanh toán:", font=("Segoe UI", 10), bg="#f7f9fc").grid(row=3, column=0, sticky="w", pady=5)
+        tk.Label(right_frame, text="Số tiền thanh toán:", font=("Segoe UI", 10), bg="#f7f9fc").grid(row=3, column=0, sticky="w", pady=5)
         self.thanh_toan_entry = tk.Entry(right_frame, textvariable=self.update_fields_vars["Đã thanh toán:"], font=("Segoe UI", 10))
         self.thanh_toan_entry.grid(row=3, column=1, sticky="ew", pady=5)
         self.thanh_toan_entry.bind("<KeyRelease>", self.format_thanh_toan_entry)  # Bind sự kiện KeyRelease để định dạng số
@@ -139,7 +143,7 @@ class CongNoView(tk.Frame):
         button_frame.grid(row=5, column=0, columnspan=2, sticky="ew", pady=20)
 
         # Button "Cập nhật" với bo góc
-        ctk.CTkButton(
+        self.update_button = ctk.CTkButton(
             button_frame,
             text="Cập nhật",
             command=self.update_cong_no,
@@ -148,7 +152,8 @@ class CongNoView(tk.Frame):
             corner_radius=10,  
             height=30,        
             width=100        
-        ).pack(side="right", padx=5)
+        )
+        self.update_button.pack(side="right", padx=5)
 
         # Button "Chuyển tiếp" với bo góc
         ctk.CTkButton(
@@ -258,19 +263,17 @@ class CongNoView(tk.Frame):
             
             # Cập nhật các ô thông tin bên phải
             self.update_fields_vars["Tên khách hàng:"].set(ten)
-            self.update_fields_vars["Công nợ hiện tại:"].set(tong_cong_no_fmt)
+            self.update_fields_vars["Công nợ hiện tại:"].set(tong_cong_no_fmt) # Cả label và entry đều dùng chung var
             self.update_fields_vars["Đã thanh toán:"].set(cong_no_dtt_fmt)
-            # self.update_fields_vars["Ngày thanh toán:"].set(ngay_cap_nhat) # Biến này không còn được dùng cho widget nào
-            try:
-                # Cập nhật DateEntry widget với ngày từ database
-                date_part = ngay_cap_nhat.split(' ')[0]
-                date_obj = datetime.strptime(date_part, '%d/%m/%Y').date()
-                self.date_entry.set_date(date_obj)
-            except (ValueError, IndexError):
-                # Nếu ngày không hợp lệ, đặt là ngày hôm nay
-                self.date_entry.set_date(datetime.now().date())
+            # YÊU CẦU: Luôn đặt ngày thanh toán là ngày hiện tại khi chọn
+            self.date_entry.set_date(datetime.now().date())
+            self.exit_full_edit_mode() # Thoát chế độ sửa tất cả khi chọn dòng mới
 
     # Phương thức lưu lại thông tin công nợ đã cập nhật
+    def _confirm_and_update(self):
+        """Hàm nội bộ để xác nhận và gọi controller cập nhật."""
+        self.update_cong_no()
+
     def update_cong_no(self):
         """Lưu lại thông tin công nợ đã cập nhật."""
         selected_items = self.tree_cn.selection()
@@ -279,12 +282,20 @@ class CongNoView(tk.Frame):
             return
         
         # Lấy id_cn từ id của dòng được chọn
-        debt_id = int(selected_items[0])
+        self.last_selected_id = int(selected_items[0])
         
         try:
             # Lấy số tiền thanh toán mới từ ô Entry, loại bỏ dấu chấm
             payment_str = self.update_fields_vars["Đã thanh toán:"].get().replace(".", "")
             new_payment_amount = int(payment_str) if payment_str else 0
+
+            # Nếu ở chế độ sửa tất cả, lấy cả công nợ hiện tại
+            if self.is_full_edit_mode:
+                cong_no_ht_str = self.update_fields_vars["Công nợ hiện tại:"].get().replace(".", "")
+                new_cong_no_ht = int(cong_no_ht_str) if cong_no_ht_str else 0
+            else:
+                new_cong_no_ht = None # Không truyền giá trị này nếu không ở chế độ sửa tất cả
+
         except ValueError:
             messagebox.showerror("Lỗi", "Số tiền thanh toán không hợp lệ. Vui lòng chỉ nhập số.")
             return
@@ -293,25 +304,50 @@ class CongNoView(tk.Frame):
         new_payment_date = self.date_entry.get_date() 
         
         # Tìm ngày cập nhật cũ từ dữ liệu đã lưu
-        item_data = next((item for item in self.cong_no_data if str(item[0]) == str(debt_id)), None)
+        item_data = next((item for item in self.cong_no_data if str(item[0]) == str(self.last_selected_id)), None)
         
         date_to_pass = new_payment_date # Mặc định là ngày người dùng chọn
         if item_data:
             old_date_str = item_data[5] # ngay_cap_nhat
             try:
-                old_date_obj = datetime.strptime(old_date_str.split(' ')[0], '%d/%m/%Y').date()
-                # Kiểm tra nếu ngày mới nhỏ hơn ngày đã lưu
-                if new_payment_date < old_date_obj:
-                    messagebox.showerror("Ngày không hợp lệ", "Ngày thanh toán mới không được nhỏ hơn ngày cập nhật gần nhất. Đã tự động chọn ngày hiện tại.")
-                    today = datetime.now().date()
-                    self.date_entry.set_date(today)
-                    date_to_pass = today 
+                if old_date_str:
+                    old_date_obj = datetime.strptime(old_date_str.split(' ')[0], '%d/%m/%Y').date()
+                    # Kiểm tra nếu ngày mới nhỏ hơn ngày đã lưu
+                    if new_payment_date < old_date_obj:
+                        messagebox.showerror("Ngày không hợp lệ", "Ngày thanh toán mới không được nhỏ hơn ngày cập nhật gần nhất. Đã tự động chọn ngày hiện tại.")
+                        today = datetime.now().date()
+                        self.date_entry.set_date(today)
+                        date_to_pass = today
             except (ValueError, IndexError):
                 # Nếu ngày cũ không hợp lệ, không cần làm gì, cứ dùng ngày mới đã chọn
                 pass
 
+        # --- CẢI TIẾN: Tạo thông báo xác nhận rõ ràng và xử lý trường hợp thanh toán bằng 0 ---
+        confirm_message = ""
+        if self.is_full_edit_mode:
+            # Chế độ "Sửa tất cả": Hiển thị công nợ mới
+            cong_no_moi_f = f"{new_cong_no_ht:,.0f}".replace(",", ".")
+            confirm_message = f"Bạn có chắc chắn muốn sửa công nợ thành: {cong_no_moi_f} VNĐ?"
+        else:
+            # Chế độ "Cập nhật": Hiển thị số tiền thanh toán
+            if new_payment_amount == 0:
+                messagebox.showinfo("Thông báo", "Số tiền thanh toán là 0. Không có gì để cập nhật.")
+                return
+            
+            thanh_toan_f = f"{new_payment_amount:,.0f}".replace(",", ".")
+            confirm_message = f"Xác nhận thanh toán số tiền: {thanh_toan_f} VNĐ?"
+
+        confirm = messagebox.askyesno("Xác nhận cập nhật", confirm_message)
+        if confirm is not True: # Chỉ tiếp tục nếu người dùng nhấn "Yes" (True)
+            return
+
         # Gọi controller để xử lý việc cập nhật
-        self.debt_controller.update_debt_from_view(debt_id, new_payment_amount, payment_date=date_to_pass)
+        self.debt_controller.update_debt_from_view(
+            debt_id=self.last_selected_id, 
+            payment_amount=new_payment_amount, 
+            payment_date=date_to_pass,
+            new_total_debt=new_cong_no_ht # Truyền công nợ mới nếu có
+        )
 
     # Phương thức chuyển sang khách hàng tiếp theo
     def next_customer(self):
@@ -353,3 +389,26 @@ class CongNoView(tk.Frame):
             self.thanh_toan_entry.insert(0, formatted_value)
         elif value == "":
             self.thanh_toan_entry.delete(0, tk.END)
+
+    def enter_full_edit_mode(self):
+        """Chuyển sang chế độ sửa tất cả."""
+        self.is_full_edit_mode = True
+        self.update_button.configure(text="Sửa tất cả", fg_color="#f35d12" , hover_color="#fb0a0a")
+        # Ẩn label, hiện entry cho công nợ hiện tại
+        self.cong_no_hien_tai_entry.grid(row=2, column=1, sticky="ew", pady=5)
+        self.cong_no_hien_tai_entry.lift()
+        self.thanh_toan_entry.config(state="normal")
+        self.date_entry.config(state="normal")
+
+    def exit_full_edit_mode(self):
+        """Thoát khỏi chế độ sửa tất cả."""
+        self.is_full_edit_mode = False
+        self.update_button.configure(text="Cập nhật", fg_color="#2ecc71", command=self.update_cong_no)
+        # Ẩn entry, hiện lại label
+        self.cong_no_hien_tai_entry.grid_remove()
+        self.thanh_toan_entry.config(state="normal")
+        self.date_entry.config(state="normal")
+
+    def schedule_enter_full_edit_mode(self):
+        """Lên lịch để chuyển sang chế độ sửa tất cả sau một khoảng trễ."""
+        self.after(10, self.enter_full_edit_mode)

@@ -1,10 +1,8 @@
 from .base_model import BaseModel
 import sqlite3
 
-class DebtModel(BaseModel):
-    def __init__(self, db_path):
-        self.connection = sqlite3.connect(db_path)
-        self.cursor = self.connection.cursor()
+class DebtModel(BaseModel): # Kế thừa từ BaseModel
+    # __init__ được kế thừa, không cần định nghĩa lại
 
     def get_debts(self):
         """Lấy danh sách công nợ kèm tên khách hàng từ database"""
@@ -52,12 +50,9 @@ class DebtModel(BaseModel):
         """
         try:
             self.cursor.execute(query, (new_cong_no_cu, payment_amount, new_cong_no_ht, update_date, debt_id))
-            self.connection.commit()
+            self.conn.commit()
         except sqlite3.Error as e:
-            self.connection.rollback()
+            self.conn.rollback()
             raise e
 
-
-    def close(self):
-        if hasattr(self, 'connection'):
-            self.connection.close()
+    # close() được kế thừa, không cần định nghĩa lại

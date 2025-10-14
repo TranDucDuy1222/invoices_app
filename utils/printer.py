@@ -153,10 +153,14 @@ class InvoicePrinter:
         safe_current_debt = current_debt_cleaned
         safe_invoice_date = sanitize_filename(invoice_date_raw)
 
+        # THÊM: Tạo một chuỗi thời gian duy nhất (Giờ-Phút-Giây) để tránh trùng lặp file
+        timestamp = datetime.now().strftime("%H-%M")
+
         # 2. Tạo tên file và thư mục đã được "làm sạch"
         save_dir = r"C:\Bảng Kê Khối Lượng"
         os.makedirs(save_dir, exist_ok=True)
-        filename = f"{safe_customer_name}_{safe_current_debt}_{safe_invoice_date}.pdf"
+        # THAY ĐỔI: Thêm timestamp vào cuối tên file
+        filename = f"{safe_customer_name}_{safe_current_debt}_{safe_invoice_date}_{timestamp}.pdf"
 
         # 4. Tạo đường dẫn đầy đủ
         filepath = os.path.join(save_dir, filename)
@@ -166,23 +170,50 @@ class InvoicePrinter:
         c = canvas.Canvas(filepath, pagesize=self.pagesize)
 
 
+        # --- Hàm tiện ích để cắt ngắn văn bản ---
+        def truncate_text(text, max_width, font_name, font_size):
+            """Cắt ngắn văn bản nếu nó vượt quá chiều rộng cho phép và thêm dấu '...'."""
+            # Thêm một khoảng đệm nhỏ để đảm bảo không bị sát lề
+            padding = 7 * mm # Tăng padding để đảm bảo vừa vặn khi căn giữa
+            available_width = max_width - padding
+
+            # Nếu văn bản vừa đủ, trả về luôn
+            if pdfmetrics.stringWidth(text, font_name, font_size) <= available_width:
+                return text
+
+            # Nếu không, cắt bớt và thêm '...'
+            ellipsis = '...'
+            ellipsis_width = pdfmetrics.stringWidth(ellipsis, font_name, font_size)
+            
+            # Cắt từ cuối chuỗi cho đến khi chiều rộng phù hợp
+            for i in range(len(text) - 1, 0, -1):
+                truncated = text[:i]
+                if pdfmetrics.stringWidth(truncated, font_name, font_size) + ellipsis_width <= available_width:
+                    return truncated + ellipsis
+            
+            # Trường hợp chuỗi quá ngắn, chỉ trả về dấu '...'
+            return ellipsis
+
         # --- Dữ liệu bảng ---
         # THAY ĐỔI: Sắp xếp lại tiêu đề cột theo yêu cầu mới
         table_header = ["Ngày", "Tên mặt hàng", "Số xe", "Số khối", "Số chuyến", "Giá tại bãi", "Phí VC", "Thành tiền", "Nơi giao"]
+        col_widths = [25*mm, 55*mm, 25*mm, 18*mm, 24*mm, 25*mm, 25*mm, 36*mm, 32*mm]
+        body_font_size = 8
+
         table_data = [table_header]
         for item in items:
             # item: (ngay_mua, ten_sp, so_xe, lay_tai_bai, don_vi, so_luong, thanh_tien, noi_giao, don_gia, phi_vc)
-            ngay_mua = item[0]
-            ten_sp = item[1]
-            so_xe = item[2] # Số xe
-            don_vi = item[4] # ĐV
-            so_luong = str(item[5]) # SL
-            don_gia = f"{int(item[8]):,.0f}".replace(",", ".") if item[8] else "0" # Giá tại bãi
-            phi_vc = f"{int(item[9]):,.0f}".replace(",", ".") if item[9] else "0" # Phí VC
-            thanh_tien = f"{int(item[6]):,.0f}".replace(",", ".") # Thành tiền
-            noi_giao = item[7] # Nơi giao
-            
-            # THAY ĐỔI: Thêm dữ liệu vào bảng theo đúng thứ tự mới
+            # Áp dụng hàm truncate_text cho các cột có thể bị tràn
+            ngay_mua = truncate_text(item[0], col_widths[0], self.font_name, body_font_size)
+            ten_sp = truncate_text(item[1], col_widths[1], self.font_name, body_font_size)
+            so_xe = truncate_text(item[2], col_widths[2], self.font_name, body_font_size)
+            don_vi = truncate_text(item[4], col_widths[3], self.font_name, body_font_size)
+            so_luong = truncate_text(str(item[5]), col_widths[4], self.font_name, body_font_size)
+            don_gia = truncate_text(f"{int(item[8]):,.0f}".replace(",", ".") if item[8] else "0", col_widths[5], self.font_name, body_font_size)
+            phi_vc = truncate_text(f"{int(item[9]):,.0f}".replace(",", ".") if item[9] else "0", col_widths[6], self.font_name, body_font_size)
+            thanh_tien = truncate_text(f"{int(item[6]):,.0f}".replace(",", "."), col_widths[7], self.font_name, body_font_size)
+            noi_giao = truncate_text(item[7], col_widths[8], self.font_name, body_font_size)
+
             table_data.append([ngay_mua, ten_sp, so_xe, don_vi, so_luong, don_gia, phi_vc, thanh_tien, noi_giao])
 
         # --- Vẽ các trang ---
@@ -209,9 +240,6 @@ class InvoicePrinter:
                 footer_height = 30 * mm
                 y_start = self.height - self.margin - header_height
                 available_height = y_start - self.margin - footer_height
-
-            # THAY ĐỔI: Tăng cột Ngày, Số xe và giảm cột Nơi giao
-            col_widths = [25*mm, 55*mm, 25*mm, 18*mm, 24*mm, 25*mm, 25*mm, 36*mm, 32*mm]
 
             # THAY ĐỔI: Chỉ thêm header cho trang đầu tiên
             rows_for_this_page = [table_data[0]] if page_num == 1 else []
@@ -246,14 +274,14 @@ class InvoicePrinter:
                     ('FONTNAME', (0, 0), (-1, 0), self.font_name_bold),
                     ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
                     ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                    ('FONTNAME', (0, 1), (-1, -1), self.font_name, 8), # Cỡ chữ nội dung
+                    ('FONTNAME', (0, 1), (-1, -1), self.font_name, body_font_size), # Cỡ chữ nội dung
                     ('ALIGN', (3, 1), (4, -1), 'CENTER'), # Căn giữa cột Số khối, Số chuyến
                     ('ALIGN', (5, 1), (7, -1), 'CENTER'),  # Căn phải các cột tiền
                 ])
             else:
                 # Style cho các trang sau (không có header)
                 style_commands.extend([
-                    ('FONTNAME', (0, 0), (-1, -1), self.font_name, 8), # Cỡ chữ nội dung
+                    ('FONTNAME', (0, 0), (-1, -1), self.font_name, body_font_size), # Cỡ chữ nội dung
                     ('ALIGN', (3, 0), (4, -1), 'CENTER'), # Căn giữa cột Số khối, Số chuyến
                     ('ALIGN', (5, 0), (7, -1), 'CENTER'),  # Căn phải các cột tiền
                 ])

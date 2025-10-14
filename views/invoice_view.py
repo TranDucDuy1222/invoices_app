@@ -621,21 +621,29 @@ class TaoHoaDonView(tk.Frame):
         self.car_var.set("")
         # Không reset nơi giao vì có thể khách hàng muốn giao nhiều món đến cùng một chỗ
 
-    def cancel_order(self):
-        if messagebox.askyesno("Xác nhận", "Bạn có chắc chắn muốn hủy đơn hàng này?"):
-            self.current_order_items.clear()
-            for i in self.order_tree.get_children():
-                self.order_tree.delete(i)
-            self.update_total_amount()
-            self.khach_hang_var.set("")
-            self.ten_kh_label.config(text="...")
-            self.dia_chi_label.config(text="...")
-            self.sdt_label.config(text="...")
-            self.current_customer_id = None
-            self.noi_giao_var.set("")
-            self.dia_chi_chi_tiet_var.set("")
-            self.trang_thai_var.set("Chưa thanh toán") # Reset trạng thái
-            self.exit_edit_mode() # Đảm bảo thoát khỏi chế độ sửa
+    def cancel_order(self, show_confirmation=True):
+        """Hủy đơn hàng. Có thể bỏ qua hộp thoại xác nhận."""
+        # Nếu cần xác nhận, hỏi người dùng. Nếu không, mặc định là đồng ý hủy.
+        should_proceed = messagebox.askyesno("Xác nhận", "Bạn có chắc chắn muốn hủy đơn hàng này?") if show_confirmation else True
+
+        if should_proceed:
+            self._clear_order_form()
+
+    def _clear_order_form(self):
+        """Xóa toàn bộ thông tin trên form đơn hàng một cách lặng lẽ."""
+        self.current_order_items.clear()
+        for i in self.order_tree.get_children():
+            self.order_tree.delete(i)
+        self.update_total_amount()
+        self.khach_hang_var.set("")
+        self.ten_kh_label.config(text="...")
+        self.dia_chi_label.config(text="...")
+        self.sdt_label.config(text="...")
+        self.current_customer_id = None
+        self.noi_giao_var.set("")
+        self.dia_chi_chi_tiet_var.set("")
+        self.trang_thai_var.set("Chưa thanh toán") # Reset trạng thái
+        self.exit_edit_mode() # Đảm bảo thoát khỏi chế độ sửa
             
     def complete_order(self):
         if not self.current_customer_id:
@@ -661,4 +669,6 @@ class TaoHoaDonView(tk.Frame):
         )
 
         if success:
-            self.cancel_order() # Xóa form nếu thành công
+            # Gọi hàm xóa form mà không hiển thị thông báo xác nhận
+            self._clear_order_form()
+            # Thông báo cho người dùng biết đã hoàn thành

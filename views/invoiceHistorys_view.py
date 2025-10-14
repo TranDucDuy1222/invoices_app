@@ -233,18 +233,18 @@ class LsHoaDonView(tk.Frame):
         final_button_frame = tk.Frame(right_frame, bg="#f7f9fc", pady=10)
         final_button_frame.grid(row=5, column=0, sticky="ew") # <-- Đặt vào hàng 5
 
-        # Cấu hình frame để các nút con được căn giữa
-        final_button_frame.pack_propagate(0) # Ngăn frame co lại
-        final_button_frame.configure(height=50) # Đặt chiều cao cố định cho frame
+        # Cấu hình để frame chứa nút tự động căn giữa
+        final_button_frame.grid_columnconfigure(0, weight=1)
 
         button_group = tk.Frame(final_button_frame, bg="#f7f9fc")
-        button_group.pack(anchor="center")
+        button_group.grid(row=0, column=0) # Đặt vào giữa theo mặc định của grid
 
         # Nút Thanh toán (Màu xanh lá)
-        ctk.CTkButton(button_group, text="Thanh toán", command=self.process_payment,
+        self.pay_button = ctk.CTkButton(button_group, text="Thanh toán", command=self.process_payment,
                       font=("Segoe UI", 15, "bold"), fg_color="#2ecc71", hover_color="#156336",
                       width=150, corner_radius=8
-                      ).pack(side="left", padx=10, pady=2)
+                      )
+        self.pay_button.pack(side="left", padx=10, pady=2)
 
         # Nút In hóa đơn (Màu vàng)
         ctk.CTkButton(button_group, text="In hóa đơn", command=self.process_print_invoice,
@@ -257,15 +257,12 @@ class LsHoaDonView(tk.Frame):
                       font=("Segoe UI", 15, "bold"), width=150, corner_radius=8
                       ).pack(side="left", padx=10, pady=2)
         
-        # Nút "Xem trước" - gán command cho nó
-        # preview_btn = tk.Button(
-        #     final_button_frame, 
-        #     text="Xem trước", 
-        #     font=("Segoe UI", 10), 
-        #     relief="groove",
-        #     command=self.show_invoice_preview # <-- GÁN LỆNH Ở ĐÂY
-        # )
-        # preview_btn.grid(row=0, column=4, sticky="ew", padx=2)
+        # Xoá hoá đơn
+        self.delete_button = ctk.CTkButton(button_group, text="Xoá hóa đơn", command=self.process_delete_invoice,
+                      font=("Segoe UI", 15, "bold"), fg_color="#fb2e2e", hover_color="#ed0707",
+                      width=150, corner_radius=8
+                      )
+        self.delete_button.pack(side="left", padx=10, pady=2)
     # --- Các phương thức xử lý sự kiện ---
 
     def filter_invoices(self, event=None):
@@ -318,107 +315,20 @@ class LsHoaDonView(tk.Frame):
         else:
             self.date_range_frame.grid_remove()
 
+        # Hiển thị/ẩn nút Thanh toán
+        if self.current_invoice_type == 'paid':
+            self.pay_button.pack_forget()
+            # Hóa đơn đã thanh toán thì không nên xóa để bảo toàn lịch sử
+            self.delete_button.pack_forget()
+        else:
+            # Đảm bảo nút được hiển thị lại đúng vị trí
+            self.pay_button.pack(side="left", padx=10, pady=2)
+            self.delete_button.pack(side="left", padx=10, pady=2)
+
         # Cập nhật màu cho từng nút dựa trên tab hiện tại
         self.btn_hd_kh.config(bg=active_bg if self.current_invoice_type == 'unpaid' else inactive_bg, fg=active_fg if self.current_invoice_type == 'unpaid' else inactive_fg)
         self.btn_hd_cty.config(bg=active_bg if self.current_invoice_type == 'paid' else inactive_bg, fg=active_fg if self.current_invoice_type == 'paid' else inactive_fg)
         self.btn_hd_gop.config(bg=active_bg if self.current_invoice_type == 'summary' else inactive_bg, fg=active_fg if self.current_invoice_type == 'summary' else inactive_fg)
-
-    # def show_invoice_preview(self):
-    #     selected_items = self.tree_hd.selection()
-    #     if not selected_items:
-    #         messagebox.showwarning("Chưa chọn hóa đơn", "Vui lòng chọn một hóa đơn để xem trước.")
-    #         return
-    #     customer_name = self.info_vars["Tên khách hàng:"].get()
-    #     customer_phone = self.info_vars["Số điện thoại:"].get()
-
-    #     preview_window = tk.Toplevel(self.root_window)
-    #     preview_window.title(f"Xem trước hóa đơn - Khách hàng: {customer_name}")
-    #     preview_window.geometry("900x650")
-    #     preview_window.configure(bg="lightgrey")
-    #     preview_window.transient(self.root_window)
-    #     preview_window.grab_set()
-
-    #     container = tk.Frame(preview_window)
-    #     container.pack(fill="both", expand=True)
-    #     canvas = tk.Canvas(container, bg="white")
-    #     scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
-    #     canvas.configure(yscrollcommand=scrollbar.set)
-    #     scrollbar.pack(side="right", fill="y")
-    #     canvas.pack(side="left", fill="both", expand=True)
-    #     scrollable_frame = tk.Frame(canvas, bg="white", padx=30, pady=30)
-    #     canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        
-        # def on_frame_configure(event):
-        #     canvas.configure(scrollregion=canvas.bbox("all"))
-        # scrollable_frame.bind("<Configure>", on_frame_configure)
-        # header_frame = tk.Frame(scrollable_frame, bg="white")
-        # header_frame.pack(fill="x")
-        # header_left = tk.Frame(header_frame, bg="white")
-        # header_left.pack(side="left")
-        # tk.Label(header_left, text="CỬA HÀNG VLXD VÀ SAN LẤP MẶT BẰNG NGUYỄN ĐẠT", font=("Arial", 12, "bold"), bg="white", justify="left").pack(anchor="w")
-        # tk.Label(header_left, text="MST: 0314412607", font=("Arial", 10), bg="white").pack(anchor="w")
-        # tk.Label(header_left, text="Địa chỉ: 149A, Lý Thế Kiệt, P. Linh Đông, Q. Thủ Đức, TP.HCM", font=("Arial", 10), bg="white").pack(anchor="w")
-        # tk.Label(header_left, text="Liên hệ: 0977.209.709 (Đạt) - 0967.209.709 (Trinh)", font=("Arial", 10), bg="white").pack(anchor="w")
-        # header_right = tk.Frame(header_frame, bg="white")
-        # header_right.pack(side="right")
-        # ngay_lap = self.info_vars["Ngày lập:"].get()
-        # tk.Label(header_right, text=f"Ngày nhập: {ngay_lap}", font=("Arial", 10, "italic"), bg="white").pack(anchor="e")
-        # tk.Label(header_right, text=f"Ngày in: {datetime.now().strftime('%d/%m/%Y %H:%M')}", font=("Arial", 10, "italic"), bg="white").pack(anchor="e")
-        # tk.Label(scrollable_frame, text="HÓA ĐƠN BÁN HÀNG", font=("Arial", 20, "bold"), bg="white", pady=20).pack()
-        # customer_frame = tk.Frame(scrollable_frame, bg="white")
-        # customer_frame.pack(fill="x", pady=10)
-        # tk.Label(customer_frame, text=f"Tên khách hàng: {customer_name}", font=("Arial", 10, "bold"), bg="white").pack(anchor="w")
-        # tk.Label(customer_frame, text=f"Số điện thoại: {customer_phone}", font=("Arial", 10), bg="white").pack(anchor="w")
-        # details_tree_frame = tk.Frame(scrollable_frame, bg="white")
-        # details_tree_frame.pack(fill="x", pady=10)
-        # detail_cols = ("ngay_mua", "mat_hang", "so_luong", "gia", "thanh_tien", "ghi_chu")
-        # num_items = len(self.tree_detail.get_children())
-        # preview_tree = ttk.Treeview(details_tree_frame, columns=detail_cols, show="headings", height=num_items)
-        # preview_tree.heading("ngay_mua", text="Ngày mua")
-        # preview_tree.heading("mat_hang", text="Mặt hàng")
-        # preview_tree.heading("so_luong", text="Số lượng")
-        # preview_tree.heading("gia", text="Đơn giá")
-        # preview_tree.heading("thanh_tien", text="Thành tiền")
-        # preview_tree.heading("ghi_chu", text="Ghi chú (Nơi giao)")
-        # preview_tree.column("ngay_mua", width=100, anchor="center")
-        # preview_tree.column("so_luong", width=80, anchor="center")
-        # preview_tree.column("gia", width=120, anchor="e")
-        # preview_tree.column("thanh_tien", width=120, anchor="e")
-        # preview_tree.column("mat_hang", width=200)
-
-        # # Vòng lặp for để chèn dữ liệu
-        # for item_id in self.tree_detail.get_children():
-        #     item_data = self.tree_detail.item(item_id, 'values')
-        #     ngay_mua, mat_hang, so_luong, gia_str, noi_giao = item_data
-        #     try:
-        #         gia = int(gia_str.replace(".", ""))
-        #         thanh_tien = gia * float(so_luong)
-        #         thanh_tien_f = f"{thanh_tien:,.0f}".replace(",", ".")
-        #     except:
-        #         thanh_tien_f = "Lỗi"
-        #     preview_tree.insert("", "end", values=(ngay_mua, mat_hang, so_luong, gia_str, thanh_tien_f, noi_giao))
-        
-        # # Dòng này phải nằm ngoài vòng lặp for, ở cùng cấp độ thụt lề
-        # preview_tree.pack(fill="x")
-
-        # footer_frame = tk.Frame(scrollable_frame, bg="white", pady=20)
-        # footer_frame.pack(fill="x")
-        # footer_frame.grid_columnconfigure((0, 1), weight=1)
-        # footer_left = tk.Frame(footer_frame, bg="white")
-        # footer_left.grid(row=0, column=0, sticky="n")
-        # tk.Label(footer_left, text=f"Ngày {datetime.now().day} tháng {datetime.now().month} năm {datetime.now().year}", font=("Arial", 10, "italic"), bg="white").pack()
-        # tk.Label(footer_left, text="Người lập phiếu", font=("Arial", 10, "bold"), bg="white").pack(pady=(10,0))
-        # footer_right = tk.Frame(footer_frame, bg="white")
-        # footer_right.grid(row=0, column=1, sticky="e")
-        # # no_cu = self.summary_vars["Nợ cũ:"].get()
-        # # tong_no = self.summary_vars["TỔNG NỢ:"].get()
-        # # tk.Label(footer_right, text=f"Nợ cũ: {no_cu}", font=("Arial", 10), bg="white").pack(anchor="e")
-        # # tk.Label(footer_right, text=f"Tổng nợ: {tong_no}", font=("Arial", 12, "bold"), bg="white").pack(anchor="e")
-        
-        # action_frame = tk.Frame(preview_window, bg="white", pady=10)
-        # action_frame.pack(fill="x", side="bottom", padx=30)
-        # tk.Button(action_frame, text="In Hóa Đơn", font=("Arial", 10, "bold")).pack(side="right", padx=5)
-        # tk.Button(action_frame, text="Đóng", command=preview_window.destroy).pack(side="right")
 
     def get_date_range(self):
         """Lấy ngày bắt đầu và kết thúc từ DateEntry."""
@@ -531,6 +441,25 @@ class LsHoaDonView(tk.Frame):
                 customer_id = invoice_data[7] # id_kh
                 total_amount = invoice_data[5] # tong_tien
                 self.controller.pay_invoice(invoice_id, customer_id, total_amount)
+
+    def process_delete_invoice(self):
+        """Xử lý sự kiện nhấn nút Xóa hóa đơn."""
+        selected_items = self.tree_hd.selection()
+        if not selected_items:
+            messagebox.showwarning("Chưa chọn hóa đơn", "Vui lòng chọn một hóa đơn để xóa.")
+            return
+
+        if self.current_invoice_type == 'paid':
+            messagebox.showinfo("Thông báo", "Không thể xóa hóa đơn đã được thanh toán.")
+            return
+
+        invoice_id_str = selected_items[0]
+        invoice_data = self.current_invoice_data.get(invoice_id_str)
+        if invoice_data and self.controller:
+            invoice_id = int(invoice_id_str)
+            customer_id = invoice_data[7]
+            total_amount = invoice_data[5]
+            self.controller.delete_invoice(invoice_id, customer_id, total_amount)
 
     def load_hoa_don_data(self, invoice_type):
         """Yêu cầu controller tải dữ liệu hóa đơn."""

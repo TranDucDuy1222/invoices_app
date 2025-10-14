@@ -45,7 +45,7 @@ class App(tk.Tk):
         # self.state('zoomed')
         self.title("Quản Lý Hóa Đơn Công Ty TNHH TM DV Tính Khang Phúc")
         try:
-            icon_path = resource_path('icons/Logo_1.ico') 
+            icon_path = resource_path('icons/Logo_1-removebg.ico') 
             self.iconbitmap(icon_path)
         except Exception as e:
             # In ra lỗi cụ thể thay vì bỏ qua
