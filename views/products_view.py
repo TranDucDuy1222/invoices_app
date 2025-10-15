@@ -246,8 +246,8 @@ class MatHangView(tk.Frame):
                     self._add_price_row_to_details(unit, price)
 
         # Gán dữ liệu lại cho biến dữ diệu gốc
-        self.original_item_data = (item_id, values[1], unit_price_str, ten_bai) # Lưu tên hiển thị gốc
         self.selected_item_id = values[0]
+        self.original_item_data = (item_id, values[1], unit_price_str, ten_sp, ten_bai) # Lưu tên sp gốc và tên bãi
         self._show_edit_buttons()
 
     def filter_products(self, event=None):
@@ -282,22 +282,6 @@ class MatHangView(tk.Frame):
             # Nếu trống, hiện lại placeholder và đổi màu chữ thành xám
             event.widget.insert(0, self.placeholder)
             event.widget.configure(text_color="grey")
-
-
-    # Tạo nút bấm 1 lần
-    # def _create_main_buttons(self):
-    #     """Tạo các nút bấm chính một lần duy nhất."""
-    #     button_frame = tk.Frame(right_frame, bg="#f7f9fc")
-    #     button_frame.pack(pady=30, padx=20, fill="x")
-        
-    #     self.button_frame = button_frame
-
-    #     self.add_btn = ctk.CTkButton(self.button_frame, text="Thêm", command=self.add_item_window, corner_radius=10, fg_color="#27ae60", font=("Segoe UI", 15), width=100)
-    #     self.update_btn = ctk.CTkButton(self.button_frame, text="Sửa", command=self.update_item, corner_radius=10, fg_color="#f39c12", font=("Segoe UI", 15), width=100)
-    #     self.cancel_btn = ctk.CTkButton(self.button_frame, text="Hủy", command=self.clear_selection_and_form, corner_radius=10, fg_color="#7f8c8d", font=("Segoe UI", 15), width=100)
-    #     self.delete_btn = ctk.CTkButton(self.button_frame, text="Xóa", command=self.delete_item, corner_radius=10, fg_color="#e74c3c", font=("Segoe UI", 15), width=100)
-
-    #     self._show_initial_buttons()
 
     # Thêm mặt hàng mới
     def add_item_window(self):
@@ -564,9 +548,9 @@ class MatHangView(tk.Frame):
 
         # So sánh với dữ liệu gốc
         if self.original_item_data:
-            _, original_ten_hien_thi, original_unit_price_str, original_bai = self.original_item_data
+            _, _, original_unit_price_str, original_ten_sp, original_bai = self.original_item_data
             # So sánh dữ liệu mới với dữ liệu gốc
-            if (ten_sp == self.original_item_data[3] and unit_price_str == original_unit_price_str and ten_bai == original_bai):
+            if (ten_sp == original_ten_sp and unit_price_str == original_unit_price_str and ten_bai == original_bai):
                 messagebox.showinfo("Thông báo", "Không có thay đổi nào để cập nhật.")
                 return
 

@@ -29,9 +29,9 @@ class CustomerController:
             print("Lỗi khi load danh sách bãi:", e)
 
     def add_customer(self, ten_kh, dia_chi, so_dien_thoai):
-        if not ten_kh or not dia_chi or not so_dien_thoai:
-                messagebox.showwarning("Thiếu thông tin", "Không thể thực hiện thao tác!")
-                return
+        # if not ten_kh or not dia_chi or not so_dien_thoai:
+        #         messagebox.showwarning("Thiếu thông tin", "Không thể thực hiện thao tác!")
+        #         return
         try:
             self.model.add_customer(ten_kh, dia_chi, so_dien_thoai)
             messagebox.showinfo("Thành công", "Đã thêm khách hàng mới!")

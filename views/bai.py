@@ -217,6 +217,10 @@ class YardVehicleManagementView(tk.Frame):
             ten = add_fields["Tên bãi:"].get().strip()
             dia_chi = add_fields["Địa chỉ:"].get().strip()
 
+            # Kiểm tra dữ liệu đầu vào
+            if not ten or not dia_chi:
+                messagebox.showwarning("Thiếu thông tin", "Tên bãi, địa chỉ không được để trống!")
+                return
             # Gọi phương thức add_item từ controller
             self.controller.add_yard(ten, dia_chi)
             add_window.destroy()
@@ -253,8 +257,8 @@ class YardVehicleManagementView(tk.Frame):
                 return
 
         # 4. Kiểm tra dữ liệu đầu vào (ví dụ: tên không được để trống)
-        if not ten_bai:
-            messagebox.showerror("Lỗi", "Tên bãi không được để trống.")
+        if not ten_bai or not dia_chi:
+            messagebox.showerror("Lỗi", "Tên bãi, Địa chỉ không được để trống.")
             return
 
         # 5. Yêu cầu xác nhận từ người dùng
@@ -434,6 +438,11 @@ class YardVehicleManagementView(tk.Frame):
         # Hàm lưu mặt hàng mới
         def save_new_vehicle():
             bien_so = add_fields["Biển số xe:"].get().strip()
+
+            # Kiểm tra dữ liệu đầu vào
+            if not bien_so:
+                messagebox.showwarning("Thiếu thông tin", "Biển số xe không được để trống !")
+                return
 
             # Gọi phương thức add_item từ controller
             self.controller.add_vehicle(bien_so)

@@ -11,7 +11,11 @@ class KhachHangView(tk.Frame):
         self.selected_customer_id = None
         self.original_customer_data = None # Biến lưu dữ liệu gốc
         self.all_customers_data = [] # Lưu toàn bộ danh sách khách hàng
+        
+        # Đăng ký hàm validate cho ô số điện thoại
+        self.vcmd_phone = (self.register(self._validate_phone), '%P')
         self.create_widgets()
+
 
     def create_widgets(self):  
         #------ Bảng danh sách khách hàng ------
@@ -105,6 +109,8 @@ class KhachHangView(tk.Frame):
             entry = tk.Entry(row, textvariable=var, font=("Segoe UI", 10))
             if label_text == "ID:":
                 entry.config(state="readonly", relief="flat", bg="#e9ecef")
+            elif label_text == "Số điện thoại:": # Áp dụng lệnh kiểm tra cho ô entry số điện thoại
+                entry.config(validate="key", validatecommand=self.vcmd_phone)
             entry.pack(side="left", expand=True, fill="x")
 
         # --- Phần chọn Loại khách hàng ---
@@ -132,6 +138,13 @@ class KhachHangView(tk.Frame):
 
         self._show_initial_buttons()
 
+    # Chỉ nhập được chuỗi số ở entry số điện thoại
+    def _validate_phone(self, P):
+        """Chỉ cho phép nhập số vào ô điện thoại."""
+        # P là giá trị của Entry sau khi chỉnh sửa
+        if P.isdigit() or P == "":
+            return True
+        return False
         # Xử lý sự kiện khi ô tìm kiếm được focus
     def on_search_focus_in(self, event):
         if self.search_var.get() == self.placeholder:
@@ -257,6 +270,8 @@ class KhachHangView(tk.Frame):
             label.pack(side="left")
 
             entry = tk.Entry(row, textvariable=var, font=("Segoe UI", 10))
+            if label_text == "Số điện thoại:":
+                entry.config(validate="key", validatecommand=self.vcmd_phone)
             entry.pack(side="left", expand=True, fill="x") 
             
         # Hàm lưu khách hàng mới
@@ -265,10 +280,15 @@ class KhachHangView(tk.Frame):
             dia_chi = add_fields["Địa chỉ:"].get().strip()
             so_dien_thoai = add_fields["Số điện thoại:"].get().strip()
 
+            # Kiểm tra nếu thông tin trống
+            if not ten_kh or not dia_chi or not so_dien_thoai:
+                messagebox.showwarning("Thiếu thông tin", "Tên khách hàng, địa chỉ và số điện thoại không được để trống!")
+                return
+            
             # Gọi phương thức add_item từ controller
             self.controller.add_customer(ten_kh, dia_chi, so_dien_thoai)
             add_window.destroy()
-
+ 
         # Nút lưu và hủy
         button_frame_add = tk.Frame(form_add, bg="#f7f9fc")
         button_frame_add.pack(fill="x", pady=(20, 0))
@@ -305,8 +325,8 @@ class KhachHangView(tk.Frame):
                 return
 
         # 4. Kiểm tra dữ liệu đầu vào (ví dụ: tên không được để trống)
-        if not ten_kh or not dia_chi:
-            messagebox.showerror("Lỗi", "Tên khách hàng và địa chỉ không được để trống.")
+        if not ten_kh or not dia_chi or not so_dien_thoai:
+            messagebox.showerror("Lỗi", "Tên khách hàng, địa chỉ và số điện thoại không được để trống.")
             return
 
         # 5. Yêu cầu xác nhận từ người dùng
