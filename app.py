@@ -4,7 +4,10 @@ from tkinter import messagebox
 from PIL import Image, ImageTk
 import os
 import sys
-
+import shutil
+import win32api
+import win32gui
+import win32con
 
 # Import Controller
 from controllers.products_controller import ProductController
@@ -28,31 +31,61 @@ from views.setting_view import CaiDatView
 def resource_path(relative_path):
     """ Lấy đường dẫn tuyệt đối đến tài nguyên, hoạt động cho cả chế độ dev và PyInstaller """
     try:
-        # PyInstaller tạo một thư mục tạm thời và lưu đường dẫn trong _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
-        # Nếu không phải PyInstaller, dùng đường dẫn thông thường
         base_path = os.path.abspath(".")
-
     return os.path.join(base_path, relative_path)
+
+# --- HÀM MỚI ĐỂ XỬ LÝ DATABASE BỀN VỮNG ---
+def get_persistent_db_path():
+    """
+    Tạo và trả về đường dẫn đến file database trong thư mục AppData của người dùng.
+    Dữ liệu sẽ được lưu trữ bền vững tại đây.
+    """
+    # Tạo một thư mục riêng cho ứng dụng của bạn trong %APPDATA%
+    # Ví dụ: C:\Users\TenNguoiDung\AppData\Roaming\TinhKhangPhucApp
+    app_data_dir = os.path.join(os.getenv('APPDATA'), 'TinhKhangPhucApp')
+    os.makedirs(app_data_dir, exist_ok=True)
+    
+    # Đường dẫn đến file database sẽ được sử dụng
+    persistent_path = os.path.join(app_data_dir, 'CSP_0708.db')
+    return persistent_path
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
         
-        self.geometry("1730x970")
-        # Mở ứng dụng ở trạng thái toàn màn hình (maximized)
-        # self.state('zoomed')
+        self.geometry("1730x800")
         self.title("Quản Lý Hóa Đơn Công Ty TNHH TM DV Tính Khang Phúc")
         try:
-            icon_path = resource_path('icons/Logo_1.ico') 
+            icon_path = resource_path('icons/logo.ico') 
             self.iconbitmap(icon_path)
+            # print(f"Đã tải icon ứng dụng từ: {icon_path}")
         except Exception as e:
-            # In ra lỗi cụ thể thay vì bỏ qua
-            print(f"Không thể tải icon ứng dụng: {e}")
+            # Không làm crash chương trình nếu không tải được icon
+            print(f"Lỗi khi tải icon ứng dụng: {e}")
 
-        # Kết nối với cơ sở dữ liệu
-        self.db_path = resource_path("database/CSP_0708.db")
+        # --- THAY ĐỔI LOGIC XỬ LÝ DATABASE TẠI ĐÂY ---
+        # 1. Lấy đường dẫn đến file DB bền vững trong AppData
+        persistent_db_path = get_persistent_db_path()
+
+        # 2. Kiểm tra xem file DB đã tồn tại ở đó chưa. Nếu chưa (lần chạy đầu tiên),
+        #    sao chép file DB "mẫu" từ gói ứng dụng ra đó.
+        if not os.path.exists(persistent_db_path):
+            print(f"Database chưa tồn tại. Bắt đầu sao chép từ mẫu...")
+            try:
+                # Lấy đường dẫn đến file DB "mẫu" được đóng gói bên trong .exe
+                template_db_path = resource_path("database/CSP_0708.db")
+                # Sao chép file DB mẫu ra thư mục AppData
+                shutil.copy2(template_db_path, persistent_db_path)
+                print(f"Sao chép database thành công tới: {persistent_db_path}")
+            except Exception as e:
+                messagebox.showerror("Lỗi nghiêm trọng", f"Không thể tạo file database! Dữ liệu sẽ không được lưu.\nLỗi: {e}")
+                self.destroy() # Đóng ứng dụng nếu không tạo được db
+
+        # 3. LUÔN LUÔN sử dụng đường dẫn bền vững này cho mọi hoạt động của ứng dụng
+        self.db_path = persistent_db_path
+        # -----------------------------------------------
     
         self.configure(bg="#f0f0f0")
 
@@ -62,7 +95,7 @@ class App(tk.Tk):
         self._create_content_area()
         self._create_pages()
         
-        self.show_tab("Mặt hàng") # Hiển thị tab mặc định
+        self.show_tab("Mặt hàng")
 
     def _create_header(self):
         # Frame header chính, không thay đổi
@@ -122,7 +155,7 @@ class App(tk.Tk):
                 )
                 btn.pack(side="left", padx=5)
             except FileNotFoundError:
-                print(f"Lỗi: không tìm thấy file icon 'icons/{icon_file}'")
+                # print(f"Lỗi: không tìm thấy file icon 'icons/{icon_file}'")
                 # Tạo nút không có icon nếu file không tồn tại
                 btn = tk.Button(tab_frame, text=name, command=lambda n=name: self.show_tab(n))
                 btn.pack(side="left", padx=5)
@@ -149,7 +182,7 @@ class App(tk.Tk):
             )
             settings_btn.pack()
         except FileNotFoundError:
-            print("Lỗi: không tìm thấy file icon 'icons/setting.png'")
+            # print("Lỗi: không tìm thấy file icon 'icons/setting.png'")
             # Tạo nút text nếu không có icon
             settings_btn = tk.Button(settings_frame, text="Cài đặt", command=lambda: self.show_tab("Cài đặt"))
             settings_btn.pack()

@@ -1,5 +1,6 @@
 from .base_model import BaseModel
 import sqlite3
+from tkinter import messagebox
 from datetime import datetime
 
 class InvoiceHistoryModel(BaseModel):
@@ -35,7 +36,7 @@ class InvoiceHistoryModel(BaseModel):
             self.cursor.execute(query, (status,))
             return self.cursor.fetchall()
         except Exception as e:
-            print(f"Lỗi khi truy vấn hóa đơn: {e}")
+            messagebox.showerror("Lỗi truy vấn", f"Đã xảy ra lỗi khi truy vấn hóa đơn: {e}")
             return []
 
     def get_summary_invoices_by_date_range(self, start_date, end_date):
@@ -63,7 +64,7 @@ class InvoiceHistoryModel(BaseModel):
             self.cursor.execute(query, (start_date.strftime('%d/%m'), end_date.strftime('%d/%m/%Y'), start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))
             return self.cursor.fetchall()
         except Exception as e:
-            print(f"Lỗi khi truy vấn hóa đơn theo tuần: {e}")
+            messagebox.showerror("Lỗi", f"Đã xảy ra lỗi khi truy vấn hóa đơn: {e}")
             return []
 
     # Lấy chi tiết các mặt hàng của một hóa đơn cụ thể
@@ -100,7 +101,7 @@ class InvoiceHistoryModel(BaseModel):
             result = self.cursor.fetchone()
             return result if result else (0, 0) # Trả về một tuple (tong_cong_no, cong_no_cu)
         except Exception as e:
-            print(f"Lỗi khi truy vấn công nợ khách hàng: {e}")
+            messagebox.showerror("Lỗi", f"Đã xảy ra lỗi khi truy vấn công nợ: {e}")
             return (0, 0)
 
     # Lấy tất cả các mặt hàng trong các hóa đơn chưa thanh toán của một khách hàng
@@ -130,7 +131,7 @@ class InvoiceHistoryModel(BaseModel):
             self.cursor.execute(query, (customer_id, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))
             return self.cursor.fetchall()
         except Exception as e:
-            print(f"Lỗi khi truy vấn các mặt hàng chưa thanh toán: {e}")
+            messagebox.showerror("Lỗi", f"Đã xảy ra lỗi khi truy vấn mặt hàng: {e}")
             return []
 
     def update_invoice_status(self, invoice_id, new_status):
@@ -142,5 +143,23 @@ class InvoiceHistoryModel(BaseModel):
             return True
         except Exception as e:
             self.conn.rollback()
-            print(f"Lỗi khi cập nhật trạng thái hóa đơn: {e}")
+            messagebox.showerror("Lỗi", f"Đã xảy ra lỗi khi cập nhật trạng thái hóa đơn: {e}")
+            return False
+
+    def delete_invoice_by_id(self, invoice_id):
+        """Xóa một hóa đơn và các chi tiết liên quan của nó bằng ID."""
+        try:
+            # Bắt đầu một transaction
+            self.cursor.execute("BEGIN TRANSACTION;")
+            # Xóa các chi tiết hóa đơn trước để tránh lỗi khóa ngoại
+            self.cursor.execute("DELETE FROM invoice_details WHERE id_hd = ?", (invoice_id,))
+            # Xóa hóa đơn chính
+            self.cursor.execute("DELETE FROM invoices WHERE id_hd = ?", (invoice_id,))
+            # Commit transaction
+            self.conn.commit()
+            return True
+        except Exception as e:
+            # Nếu có lỗi, rollback tất cả thay đổi
+            self.conn.rollback()
+            messagebox.showerror("Lỗi", f"Đã xảy ra lỗi khi xóa hóa đơn #{invoice_id}: {e}")
             return False

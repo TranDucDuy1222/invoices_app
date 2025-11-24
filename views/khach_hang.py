@@ -50,14 +50,15 @@ class KhachHangView(tk.Frame):
 
         # Thêm cột 'loai_kh' vào columns
         columns = ("id", "ten_khach_hang", "dia_chi", "sdt")
-        self.tree_kh = ttk.Treeview(left_frame, columns=columns, show="headings", selectmode="browse")
-
+        display_cols = ("ten_khach_hang", "dia_chi", "sdt")
+        self.tree_kh = ttk.Treeview(left_frame, columns=columns, displaycolumns=display_cols, show="headings", selectmode="browse")
+        
         self.tree_kh.heading("id", text="ID")
         self.tree_kh.heading("ten_khach_hang", text="Tên khách hàng")
         self.tree_kh.heading("dia_chi", text="Địa chỉ")
         self.tree_kh.heading("sdt", text="Số điện thoại")
 
-        self.tree_kh.column("id", width=5, anchor="center")
+        self.tree_kh.column("id", width=0, stretch=False)
         self.tree_kh.column("ten_khach_hang", width=100)
         self.tree_kh.column("dia_chi", width=100)
         self.tree_kh.column("sdt", width=20, anchor="w")
@@ -113,19 +114,6 @@ class KhachHangView(tk.Frame):
                 entry.config(validate="key", validatecommand=self.vcmd_phone)
             entry.pack(side="left", expand=True, fill="x")
 
-        # --- Phần chọn Loại khách hàng ---
-        # loai_kh_frame = tk.Frame(form_frame, bg="#f7f9fc")
-        # loai_kh_frame.pack(fill="x", pady=5)
-
-        # loai_kh_label = tk.Label(loai_kh_frame, text="Loại KH:", width=12, anchor="w", bg="#f7f9fc", font=("Segoe UI", 10))
-        # loai_kh_label.pack(side="left")
-
-        # radio_container = tk.Frame(loai_kh_frame, bg="#f7f9fc")
-        # radio_container.pack(side="left")
-
-        # tk.Radiobutton(radio_container, text="Vựa", variable=self.loai_kh_var, value="Vựa", bg="#f7f9fc", font=("Segoe UI", 10), activebackground="#f7f9fc").pack(side="left", padx=5)
-        # tk.Radiobutton(radio_container, text="Khách lẻ", variable=self.loai_kh_var, value="Khách lẻ", bg="#f7f9fc", font=("Segoe UI", 10), activebackground="#f7f9fc").pack(side="left", padx=5)
-
         #------ Frame chứa các nút bấm ------
         button_frame = tk.Frame(self.details_container_kh, bg="#f7f9fc")
         button_frame.pack(pady=20, fill="x")
@@ -178,12 +166,12 @@ class KhachHangView(tk.Frame):
             if search_term in item[1].lower():
                 self.tree_kh.insert("", "end", values=item)
 
-    def _show_initial_buttons(self):
+    def _show_initial_buttons(self, show_delete=False):
         """Ẩn form chi tiết và chỉ hiển thị nút Thêm chính."""
         self.details_container_kh.pack_forget()
         self.add_btn.pack(expand=True, fill="x")
 
-    def _show_edit_buttons(self):
+    def _show_edit_buttons(self, show_delete=True):
         """Hiển thị form chi tiết và các nút Sửa, Hủy, Xóa."""
         self.add_btn.pack_forget()
         self.details_container_kh.pack(fill="both", expand=True, padx=20)
@@ -191,6 +179,11 @@ class KhachHangView(tk.Frame):
         self.cancel_btn.pack(side="left", expand=True, pady=5, padx=10)
         self.delete_btn.pack(side="left", expand=True, pady=5)
 
+        # Kiểm tra biến để hiện hoặc ẩn nút xóa
+        if show_delete:
+            self.delete_btn.pack(side="left", expand=True, pady=5)
+        else:
+            self.delete_btn.pack_forget()
     def clear_selection_and_form(self):
         """Xóa lựa chọn trên Treeview, xóa form và đặt lại các nút."""
         if self.tree_kh.selection():
@@ -230,7 +223,24 @@ class KhachHangView(tk.Frame):
         self.form_fields_kh["Số điện thoại:"].set(values[3])
         
         self.selected_customer_id = values[0]
-        self._show_edit_buttons()
+
+        # Kiểm tra xem có thể xóa khách hàng này không
+        is_deletable = self.controller.check_customer_deletable(self.selected_customer_id)
+        # Hiển thị form với trạng thái nút xóa tương ứng
+        self._show_edit_buttons(show_delete=is_deletable)
+
+    def select_customer_in_tree(self, customer_data):
+        """Tìm và chọn một khách hàng trong Treeview dựa trên dữ liệu."""
+        customer_id_to_find = str(customer_data[0])
+        for item_iid in self.tree_kh.get_children():
+            # Lấy giá trị cột đầu tiên (ID) của dòng
+            item_id = self.tree_kh.item(item_iid, "values")[0]
+            if str(item_id) == customer_id_to_find:
+                self.tree_kh.selection_set(item_iid) # Chọn dòng
+                self.tree_kh.focus(item_iid)         # Focus vào dòng
+                self.tree_kh.see(item_iid)           # Cuộn đến dòng đó
+                self.on_customer_select(None)        # Kích hoạt sự kiện để điền form
+                return
 
     def add_customer_window(self):
         # Tạo cửa sổ thêm mặt hàng
@@ -286,8 +296,17 @@ class KhachHangView(tk.Frame):
                 return
             
             # Gọi phương thức add_item từ controller
-            self.controller.add_customer(ten_kh, dia_chi, so_dien_thoai)
-            add_window.destroy()
+            action, data = self.controller.add_customer(ten_kh, dia_chi, so_dien_thoai)
+
+            if action == "success":
+                add_window.destroy()
+            elif action == "show_existing":
+                # Nếu controller yêu cầu hiển thị khách hàng đã có
+                add_window.destroy()
+                self.select_customer_in_tree(data)
+            elif action == "cancel":
+                add_window.destroy()
+            # Nếu action là "keep_open", không làm gì cả, cửa sổ sẽ tự mở
  
         # Nút lưu và hủy
         button_frame_add = tk.Frame(form_add, bg="#f7f9fc")
@@ -340,15 +359,16 @@ class KhachHangView(tk.Frame):
 
         try:
             # 6. Gọi phương thức update_customer từ controller để lưu vào database
-            self.controller.update_customer(selected_id, ten_kh, dia_chi, so_dien_thoai)
+            #    và kiểm tra kết quả trả về
+            success = self.controller.update_customer(selected_id, ten_kh, dia_chi, so_dien_thoai)
             
-            # 7. Cập nhật lại dòng tương ứng trong Treeview mà không cần tải lại toàn bộ danh sách
-            selection = self.tree_kh.selection()
-            if selection:            
-                selected_item = self.tree_kh.selection()[0]  # Lấy item đang được chọn
-                self.tree_kh.item(selected_item, values=(selected_id, ten_kh, dia_chi, so_dien_thoai))
-                # Cập nhật lại dữ liệu gốc sau khi đã lưu thành công
-                self.original_customer_data = (selected_id, ten_kh, dia_chi, so_dien_thoai)
+            # 7. CHỈ cập nhật Treeview và dữ liệu gốc NẾU controller báo thành công
+            if success:
+                selection = self.tree_kh.selection()
+                if selection:
+                    selected_item = self.tree_kh.selection()[0]
+                    self.tree_kh.item(selected_item, values=(selected_id, ten_kh, dia_chi, so_dien_thoai))
+                    self.original_customer_data = (selected_id, ten_kh, dia_chi, so_dien_thoai)
             
 
         except Exception as e:
@@ -357,16 +377,15 @@ class KhachHangView(tk.Frame):
     
     def delete_customer(self):
         selected_id = self.form_fields_kh["ID:"].get()
-        selected_tree_item = self.tree_kh.selection()
-        if not selected_id or selected_id != self.selected_customer_id:
+        if not selected_id:
             messagebox.showwarning("Cảnh báo", "Vui lòng chọn một khách hàng để xóa!")
             return
         
         confirm = messagebox.askyesno("Xác nhận xóa", "Bạn có chắc chắn muốn xóa khách hàng này?")
         if confirm:
-            # Gọi phương thức delete_item từ controller
+            selected_tree_item = self.tree_kh.selection()[0] # Lấy IID của dòng đang chọn
             self.controller.delete_customer(selected_id)
-            # Xóa thông tin trong form
+            # Xóa dòng khỏi Treeview và dọn dẹp form
             self.tree_kh.delete(selected_tree_item)
             self.clear_selection_and_form()
 

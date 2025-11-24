@@ -2,6 +2,7 @@
 from .base_model import BaseModel
 import sqlite3
 from datetime import datetime
+from tkinter import messagebox
 
 class InvoiceModel(BaseModel):
     def __init__(self, db_path):
@@ -30,7 +31,7 @@ class InvoiceModel(BaseModel):
             self.cursor.execute(query)
             return self.cursor.fetchall()
         except Exception as e:
-            print(f"Lỗi khi truy vấn sản phẩm: {e}")
+            messagebox.showerror("Lỗi", f"Đã xảy ra lỗi khi truy vấn sản phẩm: {e}")
             return []
 
     def get_all_cars(self):
@@ -40,7 +41,7 @@ class InvoiceModel(BaseModel):
             self.cursor.execute(query)
             return self.cursor.fetchall()
         except Exception as e:
-            print(f"Lỗi khi truy vấn danh sách xe: {e}")
+            messagebox.showerror("Lỗi", f"Đã xảy ra lỗi khi truy vấn danh sách xe: {e}")
             return []
 
     def get_all_customers_invoice(self):
@@ -53,7 +54,7 @@ class InvoiceModel(BaseModel):
             self.cursor.execute(query)
             return self.cursor.fetchall()
         except Exception as e:
-            print(f"Lỗi khi truy vấn dữ liệu: {e}")
+            messagebox.showerror("Lỗi", f"Đã xảy ra lỗi khi truy vấn danh sách khách hàng: {e}")
             return []
 
     def create_invoice(self, id_kh, ngay_tao_hd, ngay_mua, tong_tien, trang_thai, items):
@@ -104,8 +105,8 @@ class InvoiceModel(BaseModel):
             return id_hd
         except sqlite3.Error as e:
             self.conn.rollback() # Hoàn tác nếu có lỗi
-            print(f"Lỗi khi tạo hóa đơn: {e}")
-            raise e
+            messagebox.showerror("Lỗi", f"Đã xảy ra lỗi khi tạo hóa đơn: {e}")
+            raise
 
     def get_debt_by_customer_id(self, id_kh):
         """Lấy bản ghi công nợ của một khách hàng."""
@@ -114,7 +115,7 @@ class InvoiceModel(BaseModel):
             self.cursor.execute(query, (id_kh,))
             return self.cursor.fetchone()
         except Exception as e:
-            print(f"Lỗi khi truy vấn công nợ theo ID khách hàng: {e}")
+            messagebox.showerror("Lỗi", f"Đã xảy ra lỗi khi truy vấn công nợ: {e}")
             return None
 
     def update_customer_debt(self, id_cn, cong_no_cu, cong_no_dtt, tong_cong_no_moi, ngay_cap_nhat):
@@ -129,7 +130,7 @@ class InvoiceModel(BaseModel):
             self.conn.commit()
         except Exception as e:
             self.conn.rollback()
-            print(f"Lỗi khi cập nhật công nợ: {e}")
+            messagebox.showerror("Lỗi", f"Đã xảy ra lỗi khi cập nhật công nợ: {e}")
             raise e
 
     def create_customer_debt(self, id_kh, cong_no_cu, cong_no_dtt, tong_cong_no, ngay_cap_nhat):
@@ -140,5 +141,5 @@ class InvoiceModel(BaseModel):
             self.conn.commit()
         except Exception as e:
             self.conn.rollback()
-            print(f"Lỗi khi tạo công nợ mới: {e}")
+            messagebox.showerror("Lỗi", f"Đã xảy ra lỗi khi tạo công nợ mới: {e}")
             raise e

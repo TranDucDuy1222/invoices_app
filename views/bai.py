@@ -109,9 +109,10 @@ class YardVehicleManagementView(tk.Frame):
         style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
 
         columns = ("id", "ten_bai", "dia_chi")
-        self.tree_y = ttk.Treeview(left_frame, columns=columns, show="headings", selectmode="browse")
+        display_cols = ("ten_bai", "dia_chi")
+        self.tree_y = ttk.Treeview(left_frame, columns=columns, displaycolumns=display_cols, show="headings", selectmode="browse")
         self.tree_y.heading("id", text="ID"); self.tree_y.heading("ten_bai", text="Tên bãi"); self.tree_y.heading("dia_chi", text="Địa chỉ")
-        self.tree_y.column("id", width=50, anchor="center"); self.tree_y.column("ten_bai", width=250); self.tree_y.column("dia_chi", width=100)
+        self.tree_y.column("id", width=0, stretch=False); self.tree_y.column("ten_bai", width=250); self.tree_y.column("dia_chi", width=100)
         
         scrollbar_y = ttk.Scrollbar(left_frame, orient="vertical", command=self.tree_y.yview)
         self.tree_y.configure(yscrollcommand=scrollbar_y.set)
@@ -171,7 +172,11 @@ class YardVehicleManagementView(tk.Frame):
         self.form_fields_y["Tên bãi:"].set(values[1])
         self.form_fields_y["Địa chỉ:"].set(values[2])
         self.selected_yard_id = values[0]
-        self._show_edit_buttons()
+
+        # Kiểm tra xem có thể xóa bãi này không
+        is_deletable = self.controller.check_yard_deletable(self.selected_yard_id)
+        # Hiển thị form với trạng thái nút xóa tương ứng
+        self._show_edit_buttons(show_delete=is_deletable)
     
     def add_yard_window(self):
         # Tạo cửa sổ thêm mặt hàng
@@ -272,23 +277,24 @@ class YardVehicleManagementView(tk.Frame):
 
         try:
             # 6. Gọi phương thức update_yard từ controller để lưu vào database
-            self.controller.update_yard(selected_id, ten_bai, dia_chi)
+            #    và kiểm tra kết quả trả về
+            success = self.controller.update_yard(selected_id, ten_bai, dia_chi)
             
-            # 7. Cập nhật lại dòng tương ứng trong Treeview
-            selection = self.tree_y.selection()
-            if selection:            
-                selected_item = self.tree_y.selection()[0]
-                self.tree_y.item(selected_item, values=(selected_id, ten_bai, dia_chi))
-                # Cập nhật lại dữ liệu gốc sau khi đã lưu thành công
-                self.original_yard_data = (selected_id, ten_bai, dia_chi)
-
+            # 7. CHỈ cập nhật Treeview và dữ liệu gốc NẾU controller báo thành công
+            if success:
+                selection = self.tree_y.selection()
+                if selection:
+                    selected_item = self.tree_y.selection()[0]
+                    self.tree_y.item(selected_item, values=(selected_id, ten_bai, dia_chi))
+                    # Cập nhật lại dữ liệu gốc sau khi đã lưu thành công
+                    self.original_yard_data = (selected_id, ten_bai, dia_chi)
+                
         except Exception as e:
             # Bắt lỗi nếu có sự cố xảy ra và thông báo cho người dùng
             messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi cập nhật: {e}")
     
     def delete_yard(self):
         selected_id = self.form_fields_y["ID:"].get()
-        selected_tree_item = self.tree_y.selection()
         if not selected_id:
             messagebox.showwarning("Cảnh báo", "Vui lòng chọn một bãi để xóa!")
             return
@@ -296,11 +302,11 @@ class YardVehicleManagementView(tk.Frame):
         confirm = messagebox.askyesno("Xác nhận xóa", f"Bạn có chắc muốn xóa bãi này !")
         if not confirm:
             return
-        # Gọi phương thức delete_item từ controller
+        selected_tree_item = self.tree_y.selection()[0]
         self.controller.delete_yard(selected_id)
-        # Xóa thông tin trong form
+        # Xóa dòng khỏi Treeview và dọn dẹp form
         self.tree_y.delete(selected_tree_item)
-        self.clear_details_form()
+        self.clear_selection_and_form()
 
     def clear_details_form(self):
         """Xóa toàn bộ nội dung trong các ô Entry của form chi tiết."""
@@ -323,12 +329,13 @@ class YardVehicleManagementView(tk.Frame):
         style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
 
         columns = ("id", "bien_so_xe")
-        self.tree_x = ttk.Treeview(left_frame, columns=columns, show="headings", selectmode="browse")
+        display_cols = ("bien_so_xe",)
+        self.tree_x = ttk.Treeview(left_frame, columns=columns, displaycolumns=display_cols, show="headings", selectmode="browse")
         self.tree_x.heading("id", text="ID")
         self.tree_x.heading("bien_so_xe", text="Biển số xe")
 
-        self.tree_x.column("id", width=10, anchor="center")
-        self.tree_x.column("bien_so_xe", width=10)
+        self.tree_x.column("id", width=0, stretch=False)
+        self.tree_x.column("bien_so_xe", width=10, anchor= "center")
         
         scrollbar_x = ttk.Scrollbar(left_frame, orient="vertical", command=self.tree_x.yview)
         self.tree_x.configure(yscrollcommand=scrollbar_x.set)
@@ -394,7 +401,11 @@ class YardVehicleManagementView(tk.Frame):
         self.form_fields_x["Biển số xe:"].set(values[1])
 
         self.selected_vehicle_id = values[0]
-        self._show_vehicle_edit_buttons()
+
+        # Kiểm tra xem có thể xóa xe này không
+        is_deletable = self.controller.check_vehicle_deletable(self.selected_vehicle_id)
+        # Hiển thị form với trạng thái nút xóa tương ứng
+        self._show_vehicle_edit_buttons(show_delete=is_deletable)
 
     def add_vehicle_window(self):
         # Tạo cửa sổ thêm mặt hàng
@@ -445,8 +456,9 @@ class YardVehicleManagementView(tk.Frame):
                 return
 
             # Gọi phương thức add_item từ controller
-            self.controller.add_vehicle(bien_so)
-            add_window.destroy()
+            success = self.controller.add_vehicle(bien_so)
+            if success:
+                add_window.destroy()
 
         def close_add_window():
             add_window.destroy()
@@ -494,15 +506,16 @@ class YardVehicleManagementView(tk.Frame):
 
         try:
             # 6. Gọi phương thức update_yard từ controller để lưu vào database
-            self.controller.update_vehicle(selected_id, bien_so)
+            success = self.controller.update_vehicle(selected_id, bien_so)
             
-            # 7. Cập nhật lại dòng tương ứng trong Treeview
-            selection = self.tree_x.selection()
-            if selection:            
-                selected_item = self.tree_x.selection()[0]
-                self.tree_x.item(selected_item, values=(selected_id, bien_so))
-                # Cập nhật lại dữ liệu gốc sau khi đã lưu thành công
-                self.original_vehicle_data = (selected_id, bien_so)
+            # 7. CHỈ cập nhật Treeview và dữ liệu gốc NẾU controller báo thành công
+            if success:
+                selection = self.tree_x.selection()
+                if selection:            
+                    selected_item = self.tree_x.selection()[0]
+                    self.tree_x.item(selected_item, values=(selected_id, bien_so))
+                    # Cập nhật lại dữ liệu gốc sau khi đã lưu thành công
+                    self.original_vehicle_data = (selected_id, bien_so)
 
         except Exception as e:
             # Bắt lỗi nếu có sự cố xảy ra và thông báo cho người dùng
@@ -510,7 +523,6 @@ class YardVehicleManagementView(tk.Frame):
 
     def delete_vehicle(self):
         selected_id = self.form_fields_x["ID:"].get()
-        selected_tree_item = self.tree_x.selection()
         if not selected_id:
             messagebox.showwarning("Cảnh báo", "Vui lòng chọn một xe để xóa !")
             return
@@ -518,11 +530,11 @@ class YardVehicleManagementView(tk.Frame):
         confirm = messagebox.askyesno("Xác nhận xóa", f"Bạn có chắc muốn xóa xe này !")
         if not confirm:
             return
-        # Gọi phương thức delete_item từ controller
+        selected_tree_item = self.tree_x.selection()[0]
         self.controller.delete_vehicle(selected_id)
-        # Xóa thông tin trong form
+        # Xóa dòng khỏi Treeview và dọn dẹp form
         self.tree_x.delete(selected_tree_item)
-        self.clear_vehicle_detail_form()
+        self.clear_selection_and_form()
 
     def clear_vehicle_detail_form(self):
         """Xóa toàn bộ nội dung trong các ô Entry của form chi tiết."""
@@ -534,31 +546,39 @@ class YardVehicleManagementView(tk.Frame):
 # ==============================================================================
 # 4. HÀM QUẢN LÝ TRẠNG THÁI NÚT BẤM VÀ FORM
 # ==============================================================================
-    def _show_vehicle_initial_buttons(self):
+    def _show_vehicle_initial_buttons(self, show_delete=False):
         """Ẩn form chi tiết xe và chỉ hiển thị nút Thêm xe."""
         self.vehicle_details_container.pack_forget()
         self.add_btn_x.pack(expand=True, fill="x")
 
-    def _show_vehicle_edit_buttons(self):
+    def _show_vehicle_edit_buttons(self, show_delete=True):
         """Hiển thị form chi tiết xe và các nút Sửa, Hủy, Xóa."""
         self.add_btn_x.pack_forget()
         self.vehicle_details_container.pack(fill="both", expand=True, padx=20)
         self.update_btn_x.pack(side="left", expand=True, padx=(0, 5), fill="x")
         self.cancel_btn_x.pack(side="left", expand=True, padx=5, fill="x")
-        self.delete_btn_x.pack(side="left", expand=True, padx=(5, 0), fill="x")
+        
+        if show_delete:
+            self.delete_btn_x.pack(side="left", expand=True, padx=(5, 0), fill="x")
+        else:
+            self.delete_btn_x.pack_forget()
     
-    def _show_initial_buttons(self):
+    def _show_initial_buttons(self, show_delete=False):
         """Ẩn form chi tiết bãi và chỉ hiển thị nút Thêm bãi."""
         self.yard_details_container.pack_forget()
         self.add_btn_y.pack(expand=True, fill="x")
 
-    def _show_edit_buttons(self):
+    def _show_edit_buttons(self, show_delete=True):
         """Hiển thị form chi tiết bãi và các nút Sửa, Hủy, Xóa."""
         self.add_btn_y.pack_forget()
         self.yard_details_container.pack(fill="both", expand=True, padx=20)
         self.update_btn_y.pack(side="left", expand=True, padx=(0, 5), fill="x")
         self.cancel_btn_y.pack(side="left", expand=True, padx=5, fill="x")
-        self.delete_btn_y.pack(side="left", expand=True, padx=(5, 0), fill="x")
+        
+        if show_delete:
+            self.delete_btn_y.pack(side="left", expand=True, padx=(5, 0), fill="x")
+        else:
+            self.delete_btn_y.pack_forget()
 
     def clear_selection_and_form(self):
         """Xóa lựa chọn và form cho view hiện tại."""

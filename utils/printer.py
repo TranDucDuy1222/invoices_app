@@ -42,42 +42,47 @@ class InvoicePrinter:
         self.margin = 15 * mm
 
         try:
-            # 1. Lấy đường dẫn tuyệt đối đến file font bằng hàm resource_path
-            font_regular_path = resource_path('fonts/dejavuFonts/ttf/DejaVuSans.ttf')
-            font_bold_path = resource_path('fonts/dejavuFonts/ttf/DejaVuSans-Bold.ttf')
+            # Lấy đường dẫn đến thư mục Fonts của Windows
+            font_dir = os.path.join(os.environ.get("SystemRoot", "C:\\Windows"), "Fonts")
 
-            # 2. Đăng ký font bằng đường dẫn đã được xử lý
-            pdfmetrics.registerFont(TTFont('DejaVuSans', font_regular_path))
-            pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', font_bold_path))
+            # Đường dẫn đầy đủ đến các file font Times New Roman
+            font_regular_path = os.path.join(font_dir, 'times.ttf')
+            font_bold_path = os.path.join(font_dir, 'timesbd.ttf')
 
-            self.font_name = 'DejaVuSans'
-            self.font_name_bold = 'DejaVuSans-Bold'
-            logging.info("Đã tải thành công font DejaVu.")
+            # Đăng ký các font này với ReportLab
+            pdfmetrics.registerFont(TTFont('TimesNewRoman', font_regular_path))
+            pdfmetrics.registerFont(TTFont('TimesNewRoman-Bold', font_bold_path))
+
+            # Sử dụng các font vừa đăng ký
+            self.font_name = 'TimesNewRoman'
+            self.font_name_bold = 'TimesNewRoman-Bold'
+            logging.info("Đã tải thành công font Times New Roman từ hệ thống Windows để hỗ trợ tiếng Việt.")
 
         except Exception as e:
-            # Nếu có lỗi (ví dụ: file không được đóng gói đúng cách), sẽ chuyển sang font mặc định
-            logging.warning(f"Không thể tải font DejaVu. Sử dụng font mặc định. Lỗi: {e}")
+            # Nếu không tìm thấy font của Windows, quay lại dùng font mặc định (có thể bị lỗi ô đen)
+            logging.warning(f"Không thể tải font Times New Roman từ hệ thống. Sử dụng font mặc định. Lỗi: {e}")
             self.font_name = 'Helvetica'
             self.font_name_bold = 'Helvetica-Bold'
+            logging.warning("Lưu ý: Font mặc định có thể không hỗ trợ đầy đủ tiếng Việt.")
 
     def _draw_header(self, c, invoice_data):
         # Bắt đầu từ trên cùng
         y = self.height - self.margin
 
         # ===== Thông tin công ty =====
-        c.setFont(self.font_name_bold, 12)
+        c.setFont(self.font_name_bold, 16)
         c.drawString(self.margin, y, "Công ty TNHH TM DV Tính Khang Phúc")
-        y -= 6*mm
-        c.setFont(self.font_name_bold, 10)
+        y -= 8*mm
+        c.setFont(self.font_name_bold, 14)
         c.drawString(self.margin, y, "Chuyên kinh doanh & vận chuyển: cát, đất, đá, sỏi và san lấp mặt bằng")
-        y -= 5*mm
-        c.setFont(self.font_name, 10)
+        y -= 6*mm
+        c.setFont(self.font_name, 14)
         c.drawString(self.margin, y, "MST: 0319133438")
-        y -= 5*mm
+        y -= 6*mm
         c.drawString(self.margin, y, "STK: 45366087 - Ngân hàng ACB - Tên TK: Nguyễn Thị Kiều Chinh")
-        y -= 5*mm
+        y -= 6*mm
         c.drawString(self.margin, y, "Địa chỉ: 92 Đường 24, Phường Tam Bình, TP. Hồ Chí Minh")
-        y -= 5*mm
+        y -= 6*mm
         c.drawString(self.margin, y, "Liên hệ: 0967.209.709 (Chinh) - 0977.209.709 (Đạt)")
 
         # ===== Tiêu đề chính =====
@@ -88,26 +93,26 @@ class InvoicePrinter:
         # ===== Frame thông tin khách hàng =====
         # THAY ĐỔI: Tính toán lại tọa độ Y để không bị ghi đè
         y_info_block = y - 15*mm # Tọa độ Y chung cho cả khối thông tin khách hàng và ngày tháng
-        c.setFont(self.font_name_bold, 10)
+        c.setFont(self.font_name_bold, 14)
         c.drawString(self.margin, y_info_block, f"Tên khách hàng: {invoice_data['customer_name']}")
         
-        c.setFont(self.font_name, 10)
-        c.drawString(self.margin, y_info_block - 5*mm, f"Số điện thoại: {invoice_data['customer_phone']}")
-        c.drawString(self.margin, y_info_block - 10*mm, f"Địa chỉ khách hàng: {invoice_data['customer_address']}")
+        c.setFont(self.font_name, 14)
+        c.drawString(self.margin, y_info_block - 6*mm, f"Số điện thoại: {invoice_data['customer_phone']}")
+        c.drawString(self.margin, y_info_block - 12*mm, f"Địa chỉ khách hàng: {invoice_data['customer_address']}")
 
         # ===== Frame thông tin ngày tháng =====
         # THAY ĐỔI: Đặt lại vị trí cho khối ngày tháng để ngang hàng với thông tin khách hàng
         c.drawRightString(self.width - self.margin, y_info_block, f"Ngày lập: {invoice_data['invoice_date']}")
-        c.drawRightString(self.width - self.margin, y_info_block - 5*mm, f"Ngày in: {datetime.now().strftime('%d/%m/%Y')}")
+        c.drawRightString(self.width - self.margin, y_info_block - 6*mm, f"Ngày in: {datetime.now().strftime('%d/%m/%Y')}")
 
     def _draw_footer(self, c, invoice_data, table_bottom_y):
         # --- Vẽ phần tổng tiền ---
         y_footer_start = table_bottom_y - 15 * mm
 
-        c.setFont(self.font_name_bold, 11)
+        c.setFont(self.font_name_bold, 14)
         c.drawRightString(self.width - self.margin, y_footer_start, f"Tổng tiền hóa đơn: {invoice_data['total_invoice']}")
-        c.drawRightString(self.width - self.margin, y_footer_start - 5 * mm, f"Công nợ kỳ trước: {invoice_data['paid_amount']}")
-        c.drawRightString(self.width - self.margin, y_footer_start - 10 * mm, f"Tổng phải thu hiện tại: {invoice_data['current_debt']}")
+        c.drawRightString(self.width - self.margin, y_footer_start - 6 * mm, f"Công nợ kỳ trước: {invoice_data['paid_amount']}")
+        c.drawRightString(self.width - self.margin, y_footer_start - 12 * mm, f"Tổng phải thu hiện tại: {invoice_data['current_debt']}")
 
         content_width = self.width * 0.7               # vùng nội dung chữ ký
         start_x = self.margin                          # bắt đầu từ lề trái
@@ -115,16 +120,16 @@ class InvoicePrinter:
         col2_x = start_x + content_width * 0.65        # cột 2 (Người lập phiếu)
 
         # --- Tọa độ dòng chữ ký ---
-        y_base = y_footer_start - 25 * mm
+        y_base = y_footer_start - 30 * mm
 
         # --- Dòng "Ngày ... Tháng ... Năm ..." phía trên cột Người mua hàng ---
-        c.setFont(self.font_name, 9)
+        c.setFont(self.font_name, 14)
         c.drawCentredString(col1_x, y_base + 8 * mm, "Ngày .......... Tháng .......... Năm ..........")
 
         # --- Dòng chữ ký chính ---
-        c.setFont(self.font_name, 10)
-        c.drawCentredString(col1_x, y_base, "Người mua hàng")
-        c.drawCentredString(col2_x, y_base, "Người lập phiếu")
+        c.setFont(self.font_name, 14)
+        c.drawCentredString(col1_x, y_base, "Người lập phiếu")
+        c.drawCentredString(col2_x, y_base, "Người mua hàng")
 
 
     def create_invoice_pdf(self, invoice_data, items):
@@ -153,10 +158,14 @@ class InvoicePrinter:
         safe_current_debt = current_debt_cleaned
         safe_invoice_date = sanitize_filename(invoice_date_raw)
 
+        # THÊM: Tạo một chuỗi thời gian duy nhất (Giờ-Phút-Giây) để tránh trùng lặp file
+        timestamp = datetime.now().strftime("%H-%M")
+
         # 2. Tạo tên file và thư mục đã được "làm sạch"
         save_dir = r"C:\Bảng Kê Khối Lượng"
         os.makedirs(save_dir, exist_ok=True)
-        filename = f"{safe_customer_name}_{safe_current_debt}_{safe_invoice_date}.pdf"
+        # THAY ĐỔI: Thêm timestamp vào cuối tên file
+        filename = f"{safe_customer_name}_{safe_current_debt}_{safe_invoice_date}_{timestamp}.pdf"
 
         # 4. Tạo đường dẫn đầy đủ
         filepath = os.path.join(save_dir, filename)
@@ -166,23 +175,50 @@ class InvoicePrinter:
         c = canvas.Canvas(filepath, pagesize=self.pagesize)
 
 
+        # --- Hàm tiện ích để cắt ngắn văn bản ---
+        def truncate_text(text, max_width, font_name, font_size):
+            """Cắt ngắn văn bản nếu nó vượt quá chiều rộng cho phép và thêm dấu '...'."""
+            # Thêm một khoảng đệm nhỏ để đảm bảo không bị sát lề
+            padding = 1 * mm # Tăng padding để đảm bảo vừa vặn khi căn giữa
+            available_width = max_width - padding
+
+            # Nếu văn bản vừa đủ, trả về luôn
+            if pdfmetrics.stringWidth(text, font_name, font_size) <= available_width:
+                return text
+
+            # Nếu không, cắt bớt và thêm '...'
+            ellipsis = '...'
+            ellipsis_width = pdfmetrics.stringWidth(ellipsis, font_name, font_size)
+            
+            # Cắt từ cuối chuỗi cho đến khi chiều rộng phù hợp
+            for i in range(len(text) - 1, 0, -1):
+                truncated = text[:i]
+                if pdfmetrics.stringWidth(truncated, font_name, font_size) + ellipsis_width <= available_width:
+                    return truncated + ellipsis
+            
+            # Trường hợp chuỗi quá ngắn, chỉ trả về dấu '...'
+            return ellipsis
+
         # --- Dữ liệu bảng ---
         # THAY ĐỔI: Sắp xếp lại tiêu đề cột theo yêu cầu mới
-        table_header = ["Ngày", "Tên mặt hàng", "Số xe", "Số khối", "Số chuyến", "Giá tại bãi", "Phí VC", "Thành tiền", "Nơi giao"]
+        table_header = ["Ngày", "Tên mặt hàng", "Số xe", "Số khối", "Số\nchuyến", "Giá tại bãi", "Phí\nvận chuyển", "Thành tiền", "Nơi giao"]
+        col_widths = [25*mm, 55*mm, 25*mm, 18*mm, 24*mm, 27*mm, 26*mm, 33*mm, 32*mm]
+        body_font_size = 14
+
         table_data = [table_header]
         for item in items:
             # item: (ngay_mua, ten_sp, so_xe, lay_tai_bai, don_vi, so_luong, thanh_tien, noi_giao, don_gia, phi_vc)
-            ngay_mua = item[0]
-            ten_sp = item[1]
-            so_xe = item[2] # Số xe
-            don_vi = item[4] # ĐV
-            so_luong = str(item[5]) # SL
-            don_gia = f"{int(item[8]):,.0f}".replace(",", ".") if item[8] else "0" # Giá tại bãi
-            phi_vc = f"{int(item[9]):,.0f}".replace(",", ".") if item[9] else "0" # Phí VC
-            thanh_tien = f"{int(item[6]):,.0f}".replace(",", ".") # Thành tiền
-            noi_giao = item[7] # Nơi giao
-            
-            # THAY ĐỔI: Thêm dữ liệu vào bảng theo đúng thứ tự mới
+            # Áp dụng hàm truncate_text cho các cột có thể bị tràn
+            ngay_mua = truncate_text(item[0], col_widths[0], self.font_name, body_font_size)
+            ten_sp = truncate_text(item[1], col_widths[1], self.font_name, body_font_size)
+            so_xe = truncate_text(item[2], col_widths[2], self.font_name, body_font_size)
+            don_vi = truncate_text(item[4], col_widths[3], self.font_name, body_font_size)
+            so_luong = truncate_text(str(item[5]), col_widths[4], self.font_name, body_font_size)
+            don_gia = truncate_text(f"{int(float(item[8])):,}".replace(",", ".") if item[8] else "0", col_widths[5], self.font_name, body_font_size)
+            phi_vc = truncate_text(f"{int(float(item[9])):,}".replace(",", ".") if item[9] else "0", col_widths[6], self.font_name, body_font_size)
+            thanh_tien = truncate_text(f"{int(float(item[6])):,}".replace(",", "."), col_widths[7], self.font_name, body_font_size)
+            noi_giao = truncate_text(item[7], col_widths[8], self.font_name, body_font_size)
+
             table_data.append([ngay_mua, ten_sp, so_xe, don_vi, so_luong, don_gia, phi_vc, thanh_tien, noi_giao])
 
         # --- Vẽ các trang ---
@@ -197,7 +233,7 @@ class InvoicePrinter:
             if page_num == 1:
                 self._draw_header(c, invoice_data)
                 # THAY ĐỔI: Tăng chiều cao của header để có đủ không gian cho thông tin khách hàng
-                header_height = 65 * mm
+                header_height = 72 * mm
                 footer_height = 30 * mm
                 y_start = self.height - self.margin - header_height
                 available_height = y_start - self.margin - footer_height
@@ -209,9 +245,6 @@ class InvoicePrinter:
                 footer_height = 30 * mm
                 y_start = self.height - self.margin - header_height
                 available_height = y_start - self.margin - footer_height
-
-            # THAY ĐỔI: Tăng cột Ngày, Số xe và giảm cột Nơi giao
-            col_widths = [25*mm, 55*mm, 25*mm, 18*mm, 24*mm, 25*mm, 25*mm, 36*mm, 32*mm]
 
             # THAY ĐỔI: Chỉ thêm header cho trang đầu tiên
             rows_for_this_page = [table_data[0]] if page_num == 1 else []
@@ -236,6 +269,7 @@ class InvoicePrinter:
             
             # THAY ĐỔI: Áp dụng style linh hoạt tùy theo trang
             style_commands = [
+                # Căn giữa tất cả các ô theo cả chiều ngang và dọc
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('GRID', (0, 0), (-1, -1), 1, colors.black),
@@ -244,18 +278,20 @@ class InvoicePrinter:
                 # Style cho trang đầu (có header)
                 style_commands.extend([
                     ('FONTNAME', (0, 0), (-1, 0), self.font_name_bold),
+                    ('FONTSIZE', (0, 0), (-1, 0), 14),
                     ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                    ('FONTNAME', (0, 1), (-1, -1), self.font_name, 8), # Cỡ chữ nội dung
-                    ('ALIGN', (3, 1), (4, -1), 'CENTER'), # Căn giữa cột Số khối, Số chuyến
-                    ('ALIGN', (5, 1), (7, -1), 'CENTER'),  # Căn phải các cột tiền
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12), # Padding cho tiêu đề
+                    ('FONTNAME', (0, 1), (-1, -1), self.font_name), # Font cho nội dung
+                    ('FONTSIZE', (0, 1), (-1, -1), body_font_size), # Cỡ chữ cho nội dung
+                    ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
                 ])
             else:
                 # Style cho các trang sau (không có header)
                 style_commands.extend([
-                    ('FONTNAME', (0, 0), (-1, -1), self.font_name, 8), # Cỡ chữ nội dung
-                    ('ALIGN', (3, 0), (4, -1), 'CENTER'), # Căn giữa cột Số khối, Số chuyến
-                    ('ALIGN', (5, 0), (7, -1), 'CENTER'),  # Căn phải các cột tiền
+                    ('FONTNAME', (0, 0), (-1, -1), self.font_name), # Đặt kiểu font cho nội dung
+                    ('FONTSIZE', (0, 0), (-1, -1), body_font_size), # Đặt cỡ chữ cho nội dung
+                    # THÊM: Đặt padding trên và dưới bằng nhau để căn giữa dọc được cân đối
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
                 ])
             
             style = TableStyle(style_commands)

@@ -50,19 +50,21 @@ class MatHangView(tk.Frame):
 
         style = ttk.Style()
         # Cấu hình style cho Treeview để mỗi hàng cao 40px, đủ cho 2 dòng text
+        #style.theme_use("clam")
         style.configure("Treeview", rowheight=40, font=("Segoe UI", 10))
-        style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"))
+        style.configure("Treeview.Heading", font=("Segoe UI", 16, "bold"))
 
         columns = ("id", "ten_hien_thi", "don_vi_gia", "ten_sp_goc", "ten_bai_goc")
-        self.tree_mh = ttk.Treeview(left_frame, columns=columns, show="headings", selectmode="browse")
+        display_cols = ("ten_hien_thi", "don_vi_gia")
+        self.tree_mh = ttk.Treeview(left_frame, columns=columns, displaycolumns=display_cols, show="headings", selectmode="browse")
 
         self.tree_mh.heading("id", text="ID")
         self.tree_mh.heading("ten_hien_thi", text="Tên mặt hàng")
         self.tree_mh.heading("don_vi_gia", text="Đơn vị : Giá")
 
-        self.tree_mh.column("id", width=50, anchor="center")
-        self.tree_mh.column("ten_hien_thi", width=200)
-        self.tree_mh.column("don_vi_gia", width=300)
+        self.tree_mh.column("id", width=0, stretch=False)
+        self.tree_mh.column("ten_hien_thi", width=200, anchor="center")
+        self.tree_mh.column("don_vi_gia", width=300, anchor="center")
         # Ẩn 2 cột chứa dữ liệu gốc
         self.tree_mh.column("ten_sp_goc", width=0, stretch=False)
         self.tree_mh.column("ten_bai_goc", width=0, stretch=False)
@@ -145,18 +147,23 @@ class MatHangView(tk.Frame):
 
         self._show_initial_buttons()
 
-    def _show_initial_buttons(self):
+    def _show_initial_buttons(self, show_delete=False):
         """Ẩn form chi tiết và chỉ hiển thị nút Thêm chính."""
         self.details_container.pack_forget()
         self.add_btn.pack(expand=True, fill="x")
 
-    def _show_edit_buttons(self):
+    def _show_edit_buttons(self, show_delete=True):
         """Hiển thị form chi tiết và các nút Sửa, Hủy, Xóa."""
         self.add_btn.pack_forget()
         self.details_container.pack(fill="both", expand=True, padx=20)
         self.update_btn.pack(side="left", expand=True, pady=5)
         self.cancel_btn.pack(side="left", expand=True, pady=5, padx=10)
-        self.delete_btn.pack(side="left", expand=True, pady=5)
+        
+        if show_delete:
+            self.delete_btn.pack(side="left", expand=True, pady=5)
+        else:
+            self.delete_btn.pack_forget()
+
         self.add_price_row_btn.pack(pady=(15, 5)) # Thêm khoảng cách trên
 
     # Xóa lựa chọn trên Treeview, xóa form và đặt lại các nút
@@ -196,7 +203,7 @@ class MatHangView(tk.Frame):
             # Cập nhật danh sách giá trị cho Combobox
             # Dùng `hasattr` để kiểm tra xem combobox đã được tạo chưa, tránh lỗi khi khởi tạo
             if hasattr(self, 'yard_combobox_mh'):
-                self.yard_combobox_mh['values'] = yard_names
+                self.yard_combobox_mh['values'] = ["Không có bãi"] + yard_names
             
             # Tạo một "map" để tra cứu ID từ tên bãi sau này
             # Giả sử ID ở index 0 và tên bãi ở index 1
@@ -226,14 +233,14 @@ class MatHangView(tk.Frame):
 
         # Tách dữ liệu ra các biến riêng
         item_id, _, unit_price_str, ten_sp, ten_bai = values
-        ten_bai = ten_bai or ''
+        ten_bai_display = ten_bai or "Không có bãi" # Hiển thị "Không có bãi" nếu ten_bai là rỗng hoặc None
         # ten_hien_thi (values[1]) không được sử dụng trực tiếp để điền form
         # mà sử dụng ten_sp (values[3]) và ten_bai (values[4])
 
         # Điền dữ liệu chung
         self.form_fields_mh["ID:"].set(item_id)
         self.form_fields_mh["Tên mặt hàng:"].set(ten_sp)
-        self.form_fields_mh["Bãi:"].set(ten_bai)
+        self.form_fields_mh["Bãi:"].set(ten_bai_display)
 
         # Xử lý và hiển thị các cặp đơn vị/giá
         if unit_price_str and unit_price_str != "Lỗi định dạng":
@@ -248,7 +255,27 @@ class MatHangView(tk.Frame):
         # Gán dữ liệu lại cho biến dữ diệu gốc
         self.selected_item_id = values[0]
         self.original_item_data = (item_id, values[1], unit_price_str, ten_sp, ten_bai) # Lưu tên sp gốc và tên bãi
-        self._show_edit_buttons()
+
+        # Kiểm tra xem có thể xóa mặt hàng này không
+        is_deletable = self.controller.check_item_deletable(item_id)
+        # Hiển thị form với trạng thái nút xóa tương ứng
+        self._show_edit_buttons(show_delete=is_deletable)
+
+    def select_product_in_tree(self, product_data):
+        """Tìm và chọn một sản phẩm trong Treeview dựa trên dữ liệu."""
+        product_id_to_find = str(product_data[0])
+        for item_iid in self.tree_mh.get_children():
+            # Lấy giá trị cột đầu tiên (ID) của dòng
+            item_id = self.tree_mh.item(item_iid, "values")[0]
+            if str(item_id) == product_id_to_find:
+                self.tree_mh.selection_set(item_iid) # Chọn dòng
+                self.tree_mh.focus(item_iid)         # Focus vào dòng
+                self.tree_mh.see(item_iid)           # Cuộn đến dòng đó
+                # Kích hoạt sự kiện on_item_select để điền form chi tiết
+                # Phải gọi sau một khoảng trễ nhỏ để đảm bảo Treeview đã cập nhật xong selection
+                self.after(50, lambda: self.on_item_select(None))
+                return
+
 
     def filter_products(self, event=None):
         """Lọc danh sách sản phẩm dựa trên tên."""
@@ -410,9 +437,16 @@ class MatHangView(tk.Frame):
                 return
 
             # Gọi controller một lần duy nhất với danh sách đơn vị và giá
-            self.controller.add_item(id_bai, ten, units_list, prices_list)
+            action, data = self.controller.add_item(id_bai, ten, units_list, prices_list)
 
-            close_add_window()
+            if action == "success":
+                close_add_window()
+            elif action == "show_existing":
+                # Nếu controller yêu cầu hiển thị sản phẩm đã có
+                close_add_window()
+                self.select_product_in_tree(data)
+            # Nếu action là "keep_open" hoặc "error", không làm gì cả, cửa sổ sẽ tự mở
+
         
         def close_add_window():
             add_window.destroy()
@@ -511,7 +545,7 @@ class MatHangView(tk.Frame):
             return
 
         # Lấy id_bai từ tên bãi
-        id_bai = self.yard_map.get(ten_bai)
+        id_bai = self.yard_map.get(ten_bai) if ten_bai != "Không có bãi" else None
 
         # Thu thập các cặp đơn vị và giá từ các ô entry
         units_list = []
@@ -549,13 +583,16 @@ class MatHangView(tk.Frame):
         # So sánh với dữ liệu gốc
         if self.original_item_data:
             _, _, original_unit_price_str, original_ten_sp, original_bai = self.original_item_data
-            # So sánh dữ liệu mới với dữ liệu gốc
-            if (ten_sp == original_ten_sp and unit_price_str == original_unit_price_str and ten_bai == original_bai):
+            # Chuẩn hóa giá trị của bãi để so sánh chính xác
+            # Cả chuỗi rỗng và "Không có bãi" đều được coi là không có bãi.
+            current_bai_for_compare = ten_bai if ten_bai != "Không có bãi" else ""
+            original_bai_for_compare = original_bai or ""
+
+            if (ten_sp == original_ten_sp and unit_price_str == original_unit_price_str and current_bai_for_compare == original_bai_for_compare):
                 messagebox.showinfo("Thông báo", "Không có thay đổi nào để cập nhật.")
                 return
 
         confirm = messagebox.askyesno("Xác nhận sửa", "Xác nhận thay đổi thông tin mặt hàng này?")
-
         if not confirm:
             return
 
@@ -579,9 +616,11 @@ class MatHangView(tk.Frame):
         confirm = messagebox.askyesno("Xác nhận xóa", f"Bạn có chắc muốn xóa mặt hàng này !")
         if not confirm:
             return
-        # Gọi phương thức delete_item từ controller
+        
+        selected_tree_item = self.tree_mh.selection()[0]
         self.controller.delete_item(selected_id)
-        # Controller sẽ gọi refresh_data, tự động cập nhật Treeview.
+        # Xóa dòng khỏi Treeview và dọn dẹp form
+        self.tree_mh.delete(selected_tree_item)
         self.clear_selection_and_form()
         
     # Hàm để xóa các dòng nhập đơn vị/giá sau khi chọn sản phẩm khác

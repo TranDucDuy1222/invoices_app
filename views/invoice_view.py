@@ -1,9 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
-from datetime import date
 from tkcalendar import DateEntry
 import customtkinter as ctk
+import re # Thêm thư viện re
+from datetime import date
 from controllers.invoice_controller import InvoiceController
 
 class TaoHoaDonView(tk.Frame):
@@ -19,6 +20,7 @@ class TaoHoaDonView(tk.Frame):
         self.current_customer_id = None
         self.current_order_items = []
         self.editing_item_iid = None # Biến để theo dõi item đang được chỉnh sửa
+        self.item_counter = 0 # Biến đếm để tạo IID duy nhất
         self.trang_thai_var = tk.StringVar(value="Chưa thanh toán")
 
         # --- Đăng ký hàm kiểm tra nhập liệu ---
@@ -63,7 +65,7 @@ class TaoHoaDonView(tk.Frame):
     def validate_integer_input(self, P):
         """Kiểm tra xem giá trị mới có phải là số nguyên hay không."""
         # Cho phép chuỗi rỗng hoặc chuỗi chỉ chứa số và dấu chấm
-        if all(char.isdigit() or char == '.' for char in P) or P == "":
+        if P == "" or P.isdigit(): # Chỉ cho phép nhập số, không cho phép dấu chấm
             return True 
         return False
     def create_widgets(self):
@@ -112,22 +114,26 @@ class TaoHoaDonView(tk.Frame):
         self.unit_price_var = tk.StringVar()
 
         # Đơn vị tính và Giá bán (tùy chỉnh) - Gộp thành 1 hàng
-        tk.Label(left_frame, text="Đơn vị/Giá:", font=("Segoe UI", 10), bg="#f7f9fc").grid(row=6, column=0, sticky="w", pady=5)
+        tk.Label(left_frame, text="Đơn vị/Giá tại bãi:", font=("Segoe UI", 10), bg="#f7f9fc").grid(row=6, column=0, sticky="w", pady=5)
         custom_price_frame = tk.Frame(left_frame, bg="#f7f9fc")
         custom_price_frame.grid(row=6, column=1, sticky="ew", pady=5)
-        custom_price_frame.grid_columnconfigure(0, weight=1)
-        custom_price_frame.grid_columnconfigure(2, weight=1)
+        custom_price_frame.grid_columnconfigure(0, weight=1) # Cột cho don_vi_entry
+        custom_price_frame.grid_columnconfigure(2, weight=1) # Cột cho don_gia_entry
 
         self.don_vi_var = tk.StringVar(value="")
         self.don_vi_entry = tk.Entry(custom_price_frame, textvariable=self.don_vi_var, font=("Segoe UI", 10), width=10)
         self.don_vi_entry.grid(row=0, column=0, sticky="ew")
+        self.don_vi_entry.bind("<KeyRelease>", self.calculate_subtotal) # Tính lại tổng khi sửa
 
         tk.Label(custom_price_frame, text=" : ", font=("Segoe UI", 10, "bold"), bg="#f7f9fc").grid(row=0, column=1, padx=5)
-
+        
+        # THAY ĐỔI: Ô nhập giá sẽ không tự động định dạng dấu chấm nữa
+        # và sẽ có label "000 VNĐ" bên cạnh, giống phí vận chuyển
         self.don_gia_var = tk.StringVar()
         self.don_gia_entry = tk.Entry(custom_price_frame, textvariable=self.don_gia_var, font=("Segoe UI", 10), validate="key", validatecommand=self.vcmd, justify="right")
         self.don_gia_entry.grid(row=0, column=2, sticky="ew")
-        self.don_gia_entry.bind("<KeyRelease>", self.on_don_gia_key_release)
+        self.don_gia_entry.bind("<KeyRelease>", self.calculate_subtotal) # Chỉ cần tính lại tổng phụ
+        tk.Label(custom_price_frame, text=" 000 VNĐ", font=("Segoe UI", 10), bg="#f7f9fc").grid(row=0, column=3, sticky="w")
 
         # Số chuyến
         tk.Label(left_frame, text="Số chuyến:", font=("Segoe UI", 10), bg="#f7f9fc").grid(row=7, column=0, sticky="w", pady=5)
@@ -163,14 +169,16 @@ class TaoHoaDonView(tk.Frame):
         add_update_frame = tk.Frame(left_frame, bg="#f7f9fc")
         add_update_frame.grid(row=12, column=0, columnspan=2, pady=20, sticky="ew")
         add_update_frame.grid_columnconfigure(0, weight=1)
-        add_update_frame.grid_columnconfigure(1, weight=1)
+        add_update_frame.grid_columnconfigure(1, weight=1) # Cột cho nút Hủy/Xóa
+        add_update_frame.grid_columnconfigure(2, weight=1) # Cột cho nút Xóa
 
         self.add_button = ctk.CTkButton(add_update_frame, text=" Thêm vào đơn hàng", command=self.add_item_to_order, 
                                font=("Segoe UI", 12, "bold"), fg_color="#27ae60",
                                compound="left")
-        self.add_button.grid(row=0, column=0, padx=(0, 5), sticky="ew")
+        self.add_button.grid(row=0, column=0, columnspan=3, padx=(0, 5), sticky="ew")
 
-        self.cancel_edit_button = ctk.CTkButton(add_update_frame, text="Hủy sửa", command=self.cancel_edit, fg_color="#e74c3c")
+        self.cancel_edit_button = ctk.CTkButton(add_update_frame, text="Hủy sửa", command=self.cancel_edit, fg_color="#7f8c8d")
+        self.delete_item_button = ctk.CTkButton(add_update_frame, text="Xóa mặt hàng", command=self.delete_selected_item, fg_color="#e74c3c")
         # --- 2. Frame bên phải: Thông tin hóa đơn ---
         right_frame = tk.Frame(self, bg="white", padx=20, pady=20)
         right_frame.grid(row=0, column=1, sticky="nsew")
@@ -312,9 +320,9 @@ class TaoHoaDonView(tk.Frame):
                 prices = prices_str.split('|')
                 
                 # Tạo các radio button mới
-                for i, (unit, price) in enumerate(zip(units, prices)):
-                    formatted_price = f"{int(price):,}".replace(",", ".")
-                    option_text = f"{unit} : {formatted_price}"
+                for i, (unit, price_full) in enumerate(zip(units, prices)):
+                    price_display = str(int(price_full) // 1000) # Chia 1000 để hiển thị
+                    option_text = f"{unit} : {price_display}"
                     
                     rb = ttk.Radiobutton(self.unit_price_options_frame, text=option_text, variable=self.unit_price_var,
                                          value=option_text, command=self.on_unit_price_select)
@@ -331,18 +339,39 @@ class TaoHoaDonView(tk.Frame):
         if " : " in selected_pair:
             unit, price_str = selected_pair.split(' : ')
             self.don_vi_var.set(unit.strip())
-            self.don_gia_var.set(price_str.strip())
+            self.don_gia_var.set(price_str.strip()) # price_str đã là giá trị đã chia 1000
             self.calculate_subtotal()
 
     def _on_tree_scroll(self, event):
         """
-        Xử lý sự kiện cuộn chuột trên Treeview để tăng tốc độ cuộn.
-        Bạn có thể thay đổi giá trị của 'scroll_speed' để nhanh hơn hoặc chậm hơn.
+        Xử lý sự kiện cuộn chuột trên Treeview để cuộn danh sách.
         """
-        scroll_speed = 5  # Cuộn 5 dòng mỗi lần lăn chuột
         # event.delta < 0 là cuộn xuống, > 0 là cuộn lên (trên Windows)
-        self.order_tree.yview_scroll(int(-1 * (event.delta / 120) * scroll_speed), "units")
-        self.order_tree.xview_scroll(int(-1 * (event.delta / 120) * scroll_speed), "units")
+        # Lệnh yview_scroll sẽ cuộn Treeview theo chiều dọc.
+        self.order_tree.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    def _parse_don_vi_value(self, don_vi_text):
+        """
+        Phân tích chuỗi từ ô 'Đơn vị/Số khối' và trả về giá trị số để tính toán.
+        - "4.9m3", "3,9m", "5 m" -> 4.9, 3.9, 5.0
+        - "m3", "m" -> 1.0
+        - "Bao", "Cái" hoặc chữ bất kỳ -> 1.0
+        - Số thuần túy "4.9" -> 4.9
+        """
+        text = str(don_vi_text).strip().lower()
+        if not text:
+            return 0.0
+
+        if 'm' in text:
+            number_part = text.split('m')[0].strip()
+            if not number_part:
+                return 1.0
+            text = number_part
+
+        try:
+            return float(text.replace(',', '.'))
+        except ValueError:
+            return 1.0
 
     def on_order_item_select(self, event):
         """Xử lý khi một item trong đơn hàng được chọn để chỉnh sửa."""
@@ -366,13 +395,12 @@ class TaoHoaDonView(tk.Frame):
         self.on_item_select(None) # Tải lại các option đơn vị/giá
 
         # Tìm và set đúng option đơn vị/giá
-        don_gia_formatted = f"{item_data['don_gia']:,}".replace(",", ".")
-        unit_price_str = f"{item_data['don_vi']} : {don_gia_formatted}"
+        don_gia_display_for_radio = str(item_data['don_gia'] // 1000)
+        unit_price_str = f"{item_data['don_vi']} : {don_gia_display_for_radio}"
         self.unit_price_var.set(unit_price_str)
 
         # Định dạng giá khi điền vào form
-        # Định dạng giá khi điền vào form
-        self.don_gia_var.set(don_gia_formatted)
+        self.don_gia_var.set(str(item_data['don_gia'] // 1000))
         self.don_vi_var.set(item_data["don_vi"])
         self.so_luong_var.set(item_data["so_luong"])
         self.phi_vc_var.set(str(item_data["phi_vc"] // 1000)) # Chuyển về dạng nghìn đồng
@@ -387,29 +415,24 @@ class TaoHoaDonView(tk.Frame):
         self.enter_edit_mode()
 
     def on_don_gia_key_release(self, event=None):
-        """Định dạng ô giá và tính lại tổng phụ."""
-        self.format_don_gia_entry()
-        self.calculate_subtotal()
-
-    def format_don_gia_entry(self, event=None):
-        """Định dạng số trong ô đơn giá với dấu chấm."""
-        current_value = self.don_gia_var.get()
-        # Bỏ các dấu chấm cũ để lấy số thuần
-        value_no_dots = current_value.replace(".", "")
-        if value_no_dots.isdigit():
-            formatted_value = f"{int(value_no_dots):,}".replace(",", ".")
-            self.don_gia_var.set(formatted_value)
+        """Hàm này không còn được sử dụng sau khi thay đổi cách nhập giá."""
+        pass
 
     def calculate_subtotal(self, event=None):
+        """Tính toán tổng phụ cho mặt hàng."""
         try:
-            so_luong = self.so_luong_var.get()
-            # Bỏ dấu chấm trước khi tính toán
-            don_gia_text = self.don_gia_var.get().replace(".", "")
-            don_gia = int(don_gia_text) if don_gia_text.isdigit() else 0
+            # SỬA LỖI: Sử dụng hàm helper để phân tích giá trị đơn vị
+            don_vi_value = self._parse_don_vi_value(self.don_vi_var.get())
+
+            so_chuyen = self.so_luong_var.get() # Lấy số chuyến
+
+            don_gia_text = self.don_gia_var.get()
+            don_gia = int(don_gia_text) * 1000 if don_gia_text.isdigit() else 0
             phi_vc_text = self.phi_vc_var.get()
             phi_vc = int(phi_vc_text) * 1000 if phi_vc_text else 0
             
-            thanh_tien = (don_gia * so_luong) + phi_vc
+            # THAY ĐỔI: Thêm phép nhân với số chuyến
+            thanh_tien = (don_gia * don_vi_value * so_chuyen) + phi_vc
             self.thanh_tien_var.set(f"{thanh_tien:,.0f} VNĐ".replace(",", "."))
 
         except (ValueError, tk.TclError):
@@ -444,7 +467,7 @@ class TaoHoaDonView(tk.Frame):
         
         try:
             # Bỏ dấu chấm trước khi chuyển sang số nguyên
-            don_gia = int(self.don_gia_var.get().replace(".", ""))
+            don_gia = int(self.don_gia_var.get()) * 1000 if self.don_gia_var.get().isdigit() else 0
         except (ValueError, tk.TclError):
             messagebox.showwarning("Lỗi nhập liệu", "Đơn giá không hợp lệ.")
             return
@@ -453,7 +476,12 @@ class TaoHoaDonView(tk.Frame):
         phi_vc = int(phi_vc_text) * 1000 if phi_vc_text else 0
 
         item_data_lookup = self.mat_hang_lookup[selected_item_name]
-        item_id, real_ten_sp, _, _, ten_bai, id_bai = item_data_lookup
+        # THAY ĐỔI: Sửa lại cách giải nén tuple để lấy đúng id_bai
+        # Cấu trúc tuple từ controller: (id_sp, ten_sp, don_vi_tinh, gia_ban, ten_bai, id_bai)
+        item_id = item_data_lookup[0]
+        real_ten_sp = item_data_lookup[1]
+        ten_bai = item_data_lookup[4]
+        id_bai = item_data_lookup[5]
         
         car_data_lookup = self.car_lookup.get(selected_car_plate)
         id_xe = car_data_lookup[0] if car_data_lookup else None
@@ -461,21 +489,31 @@ class TaoHoaDonView(tk.Frame):
         don_vi = self.don_vi_var.get()
         noi_giao = self.noi_giao_var.get()
         dia_chi_chi_tiet = self.dia_chi_chi_tiet_var.get()
-        thanh_tien = (don_gia * so_luong) + phi_vc
+        # THAY ĐỔI: Tính thành tiền bằng (giá * số khối)
+        don_vi_value = self._parse_don_vi_value(don_vi)
+        thanh_tien = (don_gia * don_vi_value * so_luong) + phi_vc
+
         full_noi_giao = f"{noi_giao} - {dia_chi_chi_tiet}"
-        # --- Logic gộp sản phẩm ---
-        # Tìm xem có sản phẩm nào cùng id, cùng giá và cùng nơi giao đã tồn tại không
+
+        # --- Logic gộp sản phẩm (ĐÃ CẬP NHẬT) ---
+        # Tìm xem có sản phẩm nào cùng id, xe, nơi giao VÀ đơn vị đã tồn tại không.
         existing_item = next((item for item in self.current_order_items if 
-                              item["id"] == item_id and item["don_gia"] == don_gia and 
-                              item["noi_giao"] == noi_giao and item["so_xe"] == selected_car_plate), None)
+                              item["id_bai"] == id_bai and
+                              item["id"] == item_id and 
+                              item["don_vi"] == don_vi and
+                              item["so_xe"] == selected_car_plate and
+                              item["noi_giao"] == full_noi_giao), None)
 
         if existing_item:
-            # Nếu có, cập nhật số lượng, phí vc và thành tiền
-            # Lưu ý: không gộp các sản phẩm đi xe khác nhau hoặc giao đến nơi khác nhau
+            # Nếu có, cập nhật số lượng, phí vc, thành tiền và cộng dồn "đơn vị" (số khối)
             existing_item["so_luong"] += so_luong
             existing_item["phi_vc"] += phi_vc
-            existing_item["thanh_tien"] = (existing_item["don_gia"] * existing_item["so_luong"]) + existing_item["phi_vc"]
-            
+            # Cập nhật đơn giá và thành tiền theo lần thêm mới nhất
+            existing_item["don_gia"] = don_gia
+            # SỬA LỖI: Thêm phép nhân với "Số khối" (don_vi_value) khi tính lại thành tiền
+            don_vi_value_existing = self._parse_don_vi_value(existing_item["don_vi"])
+            existing_item["thanh_tien"] = (don_gia * don_vi_value_existing * existing_item["so_luong"]) + existing_item["phi_vc"]
+
             # Cập nhật dòng tương ứng trong Treeview
             self.order_tree.item(existing_item["iid"], values=( # Sửa thứ tự
                 existing_item["ten_sp"], # ten_sp
@@ -483,14 +521,19 @@ class TaoHoaDonView(tk.Frame):
                 existing_item["so_xe"], # so_xe
                 existing_item["don_vi"], # don_vi
                 existing_item["so_luong"], # so_luong
-                f"{existing_item['don_gia']:,}".replace(",", "."), # gia_tai_bai
-                f"{existing_item['phi_vc']:,}".replace(",", "."), # phi_vc
-                f"{existing_item['thanh_tien']:,}".replace(",", "."), # thanh_tien
+                f"{existing_item['don_gia']:,}".replace(",", "."), # gia_tai_bai (vẫn hiển thị đầy đủ)
+                f"{int(existing_item['phi_vc']):,}".replace(",", "."), # phi_vc
+                f"{int(existing_item['thanh_tien']):,}".replace(",", "."), # thanh_tien
                 existing_item["noi_giao"] # noi_giao
             ))
+            
+            # Hiển thị thông báo đã gộp sản phẩm
+            messagebox.showinfo("Gộp sản phẩm", f"Đã gộp thêm {so_luong} chuyến cho mặt hàng '{real_ten_sp}' đi xe '{selected_car_plate}'.")
         else:
             # Nếu không, thêm như một sản phẩm mới
-            iid = f"I{len(self.current_order_items):03d}" # Tạo IID duy nhất
+            # THAY ĐỔI: Sử dụng biến đếm để tạo IID duy nhất, không bị trùng lặp
+            iid = f"I{self.item_counter:03d}"
+            self.item_counter += 1
             order_item = {
                 "iid": iid, "id": item_id, 
                 "ten_sp": real_ten_sp, 
@@ -514,14 +557,18 @@ class TaoHoaDonView(tk.Frame):
                 selected_car_plate, # so_xe
                 don_vi, # don_vi
                 so_luong, # so_luong
-                f"{don_gia:,.0f}".replace(",", "."), # gia_tai_bai
-                f"{phi_vc:,.0f}".replace(",", "."), # phi_vc
-                f"{thanh_tien:,.0f}".replace(",", "."), # thanh_tien
+                f"{int(don_gia):,}".replace(",", "."), # gia_tai_bai (vẫn hiển thị đầy đủ)
+                f"{int(phi_vc):,}".replace(",", "."), # phi_vc
+                f"{int(thanh_tien):,}".replace(",", "."), # thanh_tien
                 full_noi_giao # noi_giao
             ))
         
         self.update_total_amount()
         self.reset_left_form()
+
+    def _find_merge_target(self, item_to_check):
+        """Tìm một item trong danh sách có thể gộp với item_to_check."""
+        return next((target for target in self.current_order_items if target["iid"] != item_to_check["iid"] and target["id"] == item_to_check["id"] and target["id_bai"] == item_to_check["id_bai"] and target["don_vi"] == item_to_check["don_vi"] and target["so_xe"] == item_to_check["so_xe"] and target["noi_giao"] == item_to_check["noi_giao"]), None)
 
     def update_order_item(self):
         """Cập nhật một item đang có trong đơn hàng."""
@@ -543,7 +590,7 @@ class TaoHoaDonView(tk.Frame):
         
         try:
             # Bỏ dấu chấm trước khi chuyển sang số nguyên
-            don_gia = int(self.don_gia_var.get().replace(".", ""))
+            don_gia = int(self.don_gia_var.get()) * 1000 if self.don_gia_var.get().isdigit() else 0
         except (ValueError, tk.TclError):
             messagebox.showwarning("Lỗi nhập liệu", "Đơn giá không hợp lệ.")
             return
@@ -553,43 +600,106 @@ class TaoHoaDonView(tk.Frame):
         noi_giao = self.noi_giao_var.get()
         dia_chi_chi_tiet = self.dia_chi_chi_tiet_var.get()
         full_noi_giao = f"{noi_giao} - {dia_chi_chi_tiet}"
-        so_xe = self.car_var.get()
-        id_xe = self.car_lookup.get(so_xe)[0] if self.car_lookup.get(so_xe) else None
-        thanh_tien = (don_gia * so_luong) + phi_vc
+        selected_car_plate = self.car_var.get()
+        don_vi_value = self._parse_don_vi_value(self.don_vi_var.get())
+        # THAY ĐỔI: Thêm phép nhân với số chuyến
+        thanh_tien = (don_gia * don_vi_value * so_luong) + phi_vc
+
+        # THAY ĐỔI: Lấy lại toàn bộ thông tin sản phẩm và xe khi cập nhật
+        # Vì người dùng không thể đổi mặt hàng khi sửa, ta lấy thông tin từ item_to_update
+        # Nhưng xe có thể đổi, nên ta lấy lại thông tin xe
+        id_sp = item_to_update["id"]
+        id_bai = item_to_update["id_bai"]
+        car_data_lookup = self.car_lookup.get(selected_car_plate)
+        id_xe = car_data_lookup[0] if car_data_lookup else None
 
         # Cập nhật dữ liệu trong list
         item_to_update.update({
+            # Thêm id và id_bai để đảm bảo dữ liệu nhất quán cho việc gộp sau này
+            "id": id_sp,
+            "id_bai": id_bai,
             "don_gia": don_gia,
             "don_vi": self.don_vi_var.get(),
             "so_luong": so_luong, 
             "phi_vc": phi_vc, 
-            "noi_giao": noi_giao, 
             "dia_chi_chi_tiet": dia_chi_chi_tiet,
-            "so_xe": so_xe,
-            "thanh_tien": thanh_tien
+            "so_xe": selected_car_plate,
+            "id_xe": id_xe,
+            "thanh_tien": thanh_tien,
+            "noi_giao": full_noi_giao
         })
-        item_to_update['noi_giao'] = full_noi_giao
 
-        # Cập nhật dòng trong Treeview
-        self.order_tree.item(self.editing_item_iid, values=( # Sửa thứ tự
-            item_to_update["ten_sp"], # ten_sp
-            item_to_update["lay_tai_bai"], # lay_tai_bai
-            item_to_update["so_xe"], # so_xe
-            item_to_update["don_vi"], # don_vi
-            so_luong, # so_luong
-            f"{don_gia:,.0f}".replace(",", "."), # gia_tai_bai
-            f"{phi_vc:,.0f}".replace(",", "."), # phi_vc
-            f"{thanh_tien:,.0f}".replace(",", "."), # thanh_tien
-            item_to_update["noi_giao"] # noi_giao
-        ))
-        
+        # --- THAY ĐỔI: Kiểm tra xem có thể gộp sau khi cập nhật không ---
+        merge_target = self._find_merge_target(item_to_update)
+        if merge_target:
+            # Gộp item vừa sửa vào merge_target
+            merge_target["so_luong"] += item_to_update["so_luong"]
+            merge_target["phi_vc"] += item_to_update["phi_vc"]
+            merge_target["don_gia"] = item_to_update["don_gia"] # Lấy giá của lần sửa cuối
+            merge_target["thanh_tien"] = (merge_target["don_gia"] * merge_target["so_luong"]) + merge_target["phi_vc"]
+
+            # Cập nhật dòng của merge_target trên Treeview
+            self.order_tree.item(merge_target["iid"], values=(
+                merge_target["ten_sp"], merge_target["lay_tai_bai"], merge_target["so_xe"],
+                merge_target["don_vi"], merge_target["so_luong"],
+                f"{int(merge_target['don_gia']):,}".replace(",", "."),
+                f"{int(merge_target['phi_vc']):,}".replace(",", "."), # gia_tai_bai (vẫn hiển thị đầy đủ)
+                f"{int(merge_target['thanh_tien']):,}".replace(",", "."),
+                merge_target["noi_giao"]
+            ))
+
+            # Xóa item đã được gộp
+            self.order_tree.delete(self.editing_item_iid)
+            self.current_order_items.remove(item_to_update)
+            messagebox.showinfo("Gộp thành công", f"Đã gộp mặt hàng vừa sửa vào dòng có cùng thông tin.")
+        else:
+            # Nếu không gộp được, chỉ cập nhật dòng hiện tại
+            self.order_tree.item(self.editing_item_iid, values=(
+                item_to_update["ten_sp"],
+                item_to_update["lay_tai_bai"],
+                item_to_update["so_xe"],
+                item_to_update["don_vi"],
+                so_luong, # gia_tai_bai (vẫn hiển thị đầy đủ)
+                f"{int(don_gia):,}".replace(",", "."),
+                f"{int(phi_vc):,}".replace(",", "."),
+                f"{int(thanh_tien):,}".replace(",", "."),
+                item_to_update["noi_giao"]
+            ))
+
         self.update_total_amount()
         self.exit_edit_mode()
+
+    def delete_selected_item(self):
+        """Xóa mặt hàng đang được chọn để sửa."""
+        if not self.editing_item_iid:
+            return
+
+        confirm = messagebox.askyesno("Xác nhận xóa", "Bạn có chắc chắn muốn xóa mặt hàng này khỏi đơn hàng?")
+        if not confirm:
+            return
+
+        # Tìm item trong list dữ liệu gốc
+        item_to_delete = next((item for item in self.current_order_items if item["iid"] == self.editing_item_iid), None)
+        
+        if item_to_delete:
+            # Xóa khỏi list dữ liệu
+            self.current_order_items.remove(item_to_delete)
+            # Xóa khỏi Treeview
+            self.order_tree.delete(self.editing_item_iid)
+            
+            # Cập nhật lại tổng tiền
+            self.update_total_amount()
+            
+            # Thoát khỏi chế độ sửa và reset form
+            self.exit_edit_mode()
 
     def enter_edit_mode(self):
         """Chuyển giao diện sang chế độ chỉnh sửa."""
         self.add_button.configure(text="Cập nhật mặt hàng", fg_color="#f39c12")
-        self.cancel_edit_button.grid(row=0, column=1, padx=(5, 0), sticky="ew")
+        # Sắp xếp lại các nút cho chế độ sửa
+        self.add_button.grid_configure(row=0, column=0, columnspan=1) # Nút Cập nhật chiếm 1 cột
+        self.delete_item_button.grid(row=0, column=1, padx=(5, 0), sticky="ew")
+        self.cancel_edit_button.grid(row=0, column=2, padx=(5, 0), sticky="ew")
         self.mat_hang_dropdown.config(state="disabled") # Không cho đổi mặt hàng khi sửa
 
     def exit_edit_mode(self):
@@ -598,7 +708,9 @@ class TaoHoaDonView(tk.Frame):
         if self.order_tree.selection():
             self.order_tree.selection_remove(self.order_tree.selection()) # Bỏ chọn dòng
         self.add_button.configure(text=" Thêm vào đơn hàng", fg_color="#27ae60")
+        self.add_button.grid_configure(row=0, column=0, columnspan=3) # Trả lại layout ban đầu
         self.cancel_edit_button.grid_forget()
+        self.delete_item_button.grid_forget()
         self.mat_hang_dropdown.config(state="readonly")
         self.reset_left_form()
 
@@ -621,21 +733,30 @@ class TaoHoaDonView(tk.Frame):
         self.car_var.set("")
         # Không reset nơi giao vì có thể khách hàng muốn giao nhiều món đến cùng một chỗ
 
-    def cancel_order(self):
-        if messagebox.askyesno("Xác nhận", "Bạn có chắc chắn muốn hủy đơn hàng này?"):
-            self.current_order_items.clear()
-            for i in self.order_tree.get_children():
-                self.order_tree.delete(i)
-            self.update_total_amount()
-            self.khach_hang_var.set("")
-            self.ten_kh_label.config(text="...")
-            self.dia_chi_label.config(text="...")
-            self.sdt_label.config(text="...")
-            self.current_customer_id = None
-            self.noi_giao_var.set("")
-            self.dia_chi_chi_tiet_var.set("")
-            self.trang_thai_var.set("Chưa thanh toán") # Reset trạng thái
-            self.exit_edit_mode() # Đảm bảo thoát khỏi chế độ sửa
+    def cancel_order(self, show_confirmation=True):
+        """Hủy đơn hàng. Có thể bỏ qua hộp thoại xác nhận."""
+        # Nếu cần xác nhận, hỏi người dùng. Nếu không, mặc định là đồng ý hủy.
+        should_proceed = messagebox.askyesno("Xác nhận", "Bạn có chắc chắn muốn hủy đơn hàng này?") if show_confirmation else True
+
+        if should_proceed:
+            self._clear_order_form()
+
+    def _clear_order_form(self):
+        """Xóa toàn bộ thông tin trên form đơn hàng một cách lặng lẽ."""
+        self.current_order_items.clear()
+        for i in self.order_tree.get_children():
+            self.order_tree.delete(i)
+        self.update_total_amount()
+        self.khach_hang_var.set("")
+        self.ten_kh_label.config(text="...")
+        self.dia_chi_label.config(text="...")
+        self.sdt_label.config(text="...")
+        self.current_customer_id = None
+        self.noi_giao_var.set("")
+        self.item_counter = 0 # Reset biến đếm khi hủy/hoàn thành đơn hàng
+        self.dia_chi_chi_tiet_var.set("")
+        self.trang_thai_var.set("Chưa thanh toán") # Reset trạng thái
+        self.exit_edit_mode() # Đảm bảo thoát khỏi chế độ sửa
             
     def complete_order(self):
         if not self.current_customer_id:
@@ -661,4 +782,6 @@ class TaoHoaDonView(tk.Frame):
         )
 
         if success:
-            self.cancel_order() # Xóa form nếu thành công
+            # Gọi hàm xóa form mà không hiển thị thông báo xác nhận
+            self._clear_order_form()
+            # Thông báo cho người dùng biết đã hoàn thành
