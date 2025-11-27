@@ -157,13 +157,9 @@ class TaoHoaDonView(tk.Frame):
         self.noi_giao_var = tk.StringVar()
         tk.Entry(left_frame, textvariable=self.noi_giao_var, font=("Segoe UI", 10)).grid(row=9, column=1, sticky="ew", pady=5)
 
-        tk.Label(left_frame, text="Địa chỉ chi tiết:", font=("Segoe UI", 10), bg="#f7f9fc").grid(row=10, column=0, sticky="w", pady=5)
-        self.dia_chi_chi_tiet_var = tk.StringVar()
-        tk.Entry(left_frame, textvariable=self.dia_chi_chi_tiet_var, font=("Segoe UI", 10)).grid(row=10, column=1, sticky="ew", pady=5)
-
-        tk.Label(left_frame, text="Thành tiền + Ship:", font=("Segoe UI", 10, "bold"), bg="#f7f9fc").grid(row=11, column=0, sticky="w", pady=5)
+        tk.Label(left_frame, text="Thành tiền + Ship:", font=("Segoe UI", 10, "bold"), bg="#f7f9fc").grid(row=10, column=0, sticky="w", pady=5)
         self.thanh_tien_var = tk.StringVar(value="0 VNĐ")
-        tk.Label(left_frame, textvariable=self.thanh_tien_var, font=("Segoe UI", 12, "bold"), bg="#f7f9fc").grid(row=11, column=1, sticky="w", pady=5)
+        tk.Label(left_frame, textvariable=self.thanh_tien_var, font=("Segoe UI", 12, "bold"), bg="#f7f9fc").grid(row=10, column=1, sticky="w", pady=5)
 
         # Frame cho các nút Thêm/Cập nhật
         add_update_frame = tk.Frame(left_frame, bg="#f7f9fc")
@@ -295,8 +291,7 @@ class TaoHoaDonView(tk.Frame):
             self.ten_kh_label.config(text=customer_data[1])
             self.dia_chi_label.config(text=customer_data[2])
             self.sdt_label.config(text=customer_data[3])
-            self.noi_giao_var.set(customer_data[2])
-            self.dia_chi_chi_tiet_var.set(customer_data[2])
+            # self.noi_giao_var.set(customer_data[2])
 
     def on_item_select(self, event):
         """Xử lý khi một mặt hàng được chọn."""
@@ -404,11 +399,8 @@ class TaoHoaDonView(tk.Frame):
         self.don_vi_var.set(item_data["don_vi"])
         self.so_luong_var.set(item_data["so_luong"])
         self.phi_vc_var.set(str(item_data["phi_vc"] // 1000)) # Chuyển về dạng nghìn đồng
-        # THAY ĐỔI: Tách chuỗi "noi_giao" đã gộp để điền vào 2 ô riêng biệt
-        full_noi_giao = item_data.get("noi_giao", "")
-        noi_giao_part, _, dia_chi_part = full_noi_giao.partition(' - ')
-        self.noi_giao_var.set(noi_giao_part)
-        self.dia_chi_chi_tiet_var.set(dia_chi_part)
+        # Điền trực tiếp nơi giao vào ô "Tên nơi giao"
+        self.noi_giao_var.set(item_data.get("noi_giao", ""))
         self.car_var.set(item_data["so_xe"])
         self.calculate_subtotal()
 
@@ -488,12 +480,10 @@ class TaoHoaDonView(tk.Frame):
 
         don_vi = self.don_vi_var.get()
         noi_giao = self.noi_giao_var.get()
-        dia_chi_chi_tiet = self.dia_chi_chi_tiet_var.get()
         # THAY ĐỔI: Tính thành tiền bằng (giá * số khối)
         don_vi_value = self._parse_don_vi_value(don_vi)
         thanh_tien = (don_gia * don_vi_value * so_luong) + phi_vc
 
-        full_noi_giao = f"{noi_giao} - {dia_chi_chi_tiet}"
 
         # --- Logic gộp sản phẩm (ĐÃ CẬP NHẬT) ---
         # Tìm xem có sản phẩm nào cùng id, xe, nơi giao VÀ đơn vị đã tồn tại không.
@@ -502,7 +492,7 @@ class TaoHoaDonView(tk.Frame):
                               item["id"] == item_id and 
                               item["don_vi"] == don_vi and
                               item["so_xe"] == selected_car_plate and
-                              item["noi_giao"] == full_noi_giao), None)
+                              item["noi_giao"] == noi_giao), None)
 
         if existing_item:
             # Nếu có, cập nhật số lượng, phí vc, thành tiền và cộng dồn "đơn vị" (số khối)
@@ -545,8 +535,7 @@ class TaoHoaDonView(tk.Frame):
                 "so_luong": so_luong, 
                 "don_gia": don_gia, 
                 "phi_vc": phi_vc,
-                "noi_giao": full_noi_giao, 
-                "dia_chi_chi_tiet": dia_chi_chi_tiet,
+                "noi_giao": noi_giao,
                 "thanh_tien": thanh_tien
             }
             self.current_order_items.append(order_item)
@@ -560,7 +549,7 @@ class TaoHoaDonView(tk.Frame):
                 f"{int(don_gia):,}".replace(",", "."), # gia_tai_bai (vẫn hiển thị đầy đủ)
                 f"{int(phi_vc):,}".replace(",", "."), # phi_vc
                 f"{int(thanh_tien):,}".replace(",", "."), # thanh_tien
-                full_noi_giao # noi_giao
+                noi_giao # noi_giao
             ))
         
         self.update_total_amount()
@@ -598,8 +587,6 @@ class TaoHoaDonView(tk.Frame):
         phi_vc_text = self.phi_vc_var.get()
         phi_vc = int(phi_vc_text) * 1000 if phi_vc_text else 0
         noi_giao = self.noi_giao_var.get()
-        dia_chi_chi_tiet = self.dia_chi_chi_tiet_var.get()
-        full_noi_giao = f"{noi_giao} - {dia_chi_chi_tiet}"
         selected_car_plate = self.car_var.get()
         don_vi_value = self._parse_don_vi_value(self.don_vi_var.get())
         # THAY ĐỔI: Thêm phép nhân với số chuyến
@@ -622,11 +609,10 @@ class TaoHoaDonView(tk.Frame):
             "don_vi": self.don_vi_var.get(),
             "so_luong": so_luong, 
             "phi_vc": phi_vc, 
-            "dia_chi_chi_tiet": dia_chi_chi_tiet,
             "so_xe": selected_car_plate,
             "id_xe": id_xe,
             "thanh_tien": thanh_tien,
-            "noi_giao": full_noi_giao
+            "noi_giao": noi_giao
         })
 
         # --- THAY ĐỔI: Kiểm tra xem có thể gộp sau khi cập nhật không ---
@@ -731,6 +717,7 @@ class TaoHoaDonView(tk.Frame):
         self.phi_vc_var.set("")
         self.thanh_tien_var.set("0 VNĐ")
         self.car_var.set("")
+        self.noi_giao_var.set("")
         # Không reset nơi giao vì có thể khách hàng muốn giao nhiều món đến cùng một chỗ
 
     def cancel_order(self, show_confirmation=True):
@@ -753,8 +740,7 @@ class TaoHoaDonView(tk.Frame):
         self.sdt_label.config(text="...")
         self.current_customer_id = None
         self.noi_giao_var.set("")
-        self.item_counter = 0 # Reset biến đếm khi hủy/hoàn thành đơn hàng
-        self.dia_chi_chi_tiet_var.set("")
+        self.item_counter = 0
         self.trang_thai_var.set("Chưa thanh toán") # Reset trạng thái
         self.exit_edit_mode() # Đảm bảo thoát khỏi chế độ sửa
             

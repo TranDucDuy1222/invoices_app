@@ -289,10 +289,13 @@ class KhachHangView(tk.Frame):
             ten_kh = add_fields["Khách hàng:"].get().strip()
             dia_chi = add_fields["Địa chỉ:"].get().strip()
             so_dien_thoai = add_fields["Số điện thoại:"].get().strip()
+            # Nếu người dùng không nhập số điện thoại, mặc định là '0'
+            if not so_dien_thoai:
+                so_dien_thoai = '0'
 
             # Kiểm tra nếu thông tin trống
-            if not ten_kh or not dia_chi or not so_dien_thoai:
-                messagebox.showwarning("Thiếu thông tin", "Tên khách hàng, địa chỉ và số điện thoại không được để trống!")
+            if not ten_kh or not dia_chi:
+                messagebox.showwarning("Thiếu thông tin", "Tên khách hàng, địa chỉ không được để trống!")
                 return
             
             # Gọi phương thức add_item từ controller
@@ -333,6 +336,9 @@ class KhachHangView(tk.Frame):
         ten_kh = self.form_fields_kh["Khách hàng:"].get().strip()
         dia_chi = self.form_fields_kh["Địa chỉ:"].get().strip()
         so_dien_thoai = self.form_fields_kh["Số điện thoại:"].get().strip()
+        # Nếu người dùng không nhập số điện thoại, mặc định là '0'
+        if not so_dien_thoai:
+            so_dien_thoai = '0'
 
         # 3. So sánh dữ liệu mới với dữ liệu gốc
         if self.original_customer_data:
@@ -344,8 +350,8 @@ class KhachHangView(tk.Frame):
                 return
 
         # 4. Kiểm tra dữ liệu đầu vào (ví dụ: tên không được để trống)
-        if not ten_kh or not dia_chi or not so_dien_thoai:
-            messagebox.showerror("Lỗi", "Tên khách hàng, địa chỉ và số điện thoại không được để trống.")
+        if not ten_kh or not dia_chi:
+            messagebox.showerror("Lỗi", "Tên khách hàng và địa chỉ không được để trống.")
             return
 
         # 5. Yêu cầu xác nhận từ người dùng

@@ -91,7 +91,7 @@ class CustomerModel(BaseModel):
             base_query = "SELECT c.id_kh, c.ten, a.dia_chi, c.sdt FROM customers c JOIN addresses a ON c.id_kh = a.id_kh"
             
             # 1. Kiểm tra số điện thoại (nếu có)
-            if sdt:
+            if sdt and sdt != '0':
                 query_sdt = f"{base_query} WHERE c.sdt = ?"
                 params_sdt = [sdt]
                 if exclude_id_kh is not None:

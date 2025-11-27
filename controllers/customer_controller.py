@@ -34,7 +34,8 @@ class CustomerController:
                 
                 # Xây dựng phần giới thiệu lỗi dựa trên các lý do tìm thấy
                 error_parts = []
-                if 'sdt' in reasons:
+                # CHỈ hiển thị lỗi SĐT nếu SĐT đó không phải là '0'
+                if 'sdt' in reasons and so_dien_thoai != '0':
                     error_parts.append(f"Số điện thoại '{so_dien_thoai}'")
                 if 'ten_dia_chi' in reasons:
                     error_parts.append("cặp Tên & Địa chỉ")
@@ -92,9 +93,9 @@ class CustomerController:
             return False
 
     def update_customer(self, selected_id, ten_kh, dia_chi, so_dien_thoai):
-        if not ten_kh or not dia_chi or not so_dien_thoai:
-                messagebox.showwarning("Thiếu thông tin", "Không thể thực hiện thao tác!")
-                return False
+        if not ten_kh or not dia_chi:
+            messagebox.showwarning("Thiếu thông tin", "Tên khách hàng và địa chỉ không được để trống!")
+            return False
         try:
             # Kiểm tra xem thông tin mới có bị trùng với một khách hàng khác không
             reasons, existing_customer_data = self.model.check_customer_exists(
@@ -107,7 +108,8 @@ class CustomerController:
 
                 # Xây dựng phần giới thiệu lỗi dựa trên các lý do tìm thấy
                 error_parts = []
-                if 'sdt' in reasons:
+                # CHỈ hiển thị lỗi SĐT nếu SĐT đó không phải là '0'
+                if 'sdt' in reasons and so_dien_thoai != '0':
                     error_parts.append(f"Số điện thoại '{so_dien_thoai}'")
                 if 'ten_dia_chi' in reasons:
                     error_parts.append("cặp Tên & Địa chỉ")
